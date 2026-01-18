@@ -701,6 +701,7 @@ function App() {
       <Modal isOpen={activeModal === 'meal-planner'} onClose={() => setActiveModal(null)} title="Meal Planner">
         <MealPlannerModal 
           mealPlan={mealPlan}
+          setMealPlan={setMealPlan}
           extendedLibrary={extendedMealLibrary}
           selectedWeeks={selectedWeeks}
           setSelectedWeeks={setSelectedWeeks}
