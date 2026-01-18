@@ -792,6 +792,8 @@ async def update_meal_in_plan(req: MealSelectionRequest):
             if meal_data:
                 meal["meal_id"] = req.meal_id
                 meal["meal_name"] = meal_data["name"]
+                meal["calories"] = meal_data.get("calories", 0)
+                meal["protein"] = meal_data.get("protein", 0)
                 meal["is_prepped"] = False
                 updated = True
                 break
@@ -801,7 +803,7 @@ async def update_meal_in_plan(req: MealSelectionRequest):
             {"_id": "user_meal_plan"},
             {"$set": {"meals": meals}}
         )
-        return {"success": True}
+        return {"success": True, "updated_meal": req.meal_id}
     else:
         raise HTTPException(status_code=404, detail="Meal not found in plan")
 
