@@ -35,7 +35,9 @@ Working father with 2 kids, working towards 12% body fat goal.
   - Shopping list generation and tracking
   - Inventory management with full CRUD (add, edit, delete)
   - Prep task management for batch cooking
+  - **Prep alerts API** - Returns urgency (NOW/TOMORROW) for upcoming prep
   - Today's smart suggestions based on prep status
+  - **Recipe scaling API** - Returns individual or family portions
 - **Frontend:**
   - Dashboard with all tracking widgets
   - Momentum section with 2-day rule tracking
@@ -43,18 +45,24 @@ Working father with 2 kids, working towards 12% body fat goal.
   - Meal Planner modal with swap functionality
   - Shopping List modal
   - Prep Checklist modal
-  - Inventory modal with manual editing (add, edit quantity, delete)
+  - Inventory modal with manual editing
   - AI Response formatting for recipes
   - Calorie settings modal
+  - **Prep Alerts section** - Urgent prep reminders on dashboard
+  - **Notification toggle** - Enable/disable browser notifications
+  - **Recipe scaling buttons** - Individual vs Family portion buttons
 
 ### Bug Fixes
-- [FIXED] Meal swap UI not updating (Dec 2025) - Root cause: `setMealPlan` wasn't passed to MealPlannerModal
-- [FIXED] Shopping list toggle adds to inventory but doesn't remove when unchecked (Dec 2025) - Added delete_one call when unchecking
-- [FIXED] Settings endpoint missing defaults causing frontend crash (Dec 2025)
+- [FIXED] Meal swap UI not updating (Dec 2025)
+- [FIXED] Shopping list toggle inventory bug (Dec 2025)
+- [FIXED] Settings endpoint missing defaults (Dec 2025)
 
 ### New Features (Dec 2025)
 - Manual inventory editing: Add items, edit quantities, delete items
 - Ingredients auto-deducted from inventory when marking prep complete
+- **P1: Prep Day Reminders** - Dashboard alerts for meals needing prep (PREP TODAY/PREP TOMORROW badges)
+- **P2: Push Notifications** - Browser notification support with service worker
+- **P2: Recipe Scaling** - Individual vs Family serving size toggle on recipe generation
 
 ## Architecture
 ```
@@ -64,9 +72,12 @@ Working father with 2 kids, working towards 12% body fat goal.
 │   ├── meal_data.py (Extended meal library with metadata)
 │   ├── server.py (FastAPI with all APIs)
 │   └── tests/
-│       └── test_inventory_features.py
+│       ├── test_inventory_features.py
+│       └── test_prep_alerts_and_recipe_scaling.py
 ├── frontend/
 │   ├── .env (REACT_APP_BACKEND_URL)
+│   ├── public/
+│   │   └── sw.js (Service worker for notifications)
 │   └── src/
 │       ├── App.js (Main app with all components)
 │       └── App.css
@@ -79,12 +90,13 @@ Working father with 2 kids, working towards 12% body fat goal.
 - `POST /api/meal-plan/save` - Save meal plan
 - `POST /api/meal-plan/update-meal` - Swap a meal in the plan
 - `POST /api/meal-plan/mark-prepped` - Mark meal prepped (deducts ingredients)
+- `GET /api/meal-plan/prep-alerts` - Get urgent prep reminders
 - `GET /api/shopping-list/generate` - Generate shopping list
 - `POST /api/shopping-list/toggle-purchased` - Toggle item (adds/removes from inventory)
 - `POST /api/inventory/add` - Manually add item
 - `POST /api/inventory/update` - Update item quantity
 - `DELETE /api/inventory/{item_name}` - Remove item
-- `POST /api/ai/recipe` - Generate recipe using AI
+- `POST /api/ai/recipe` - Generate recipe (with servings: individual/family)
 - `POST /api/ai/motivation` - Get motivational message
 
 ## Database Collections
@@ -106,13 +118,12 @@ Working father with 2 kids, working towards 12% body fat goal.
 - [x] Shopping list toggle inventory bug
 - [x] Manual inventory editing
 
-### P1 (High Priority)
-- [ ] Prep Day Reminders - Highlight meals needing advance prep more prominently
+### P1 (High Priority) - COMPLETED
+- [x] Prep Day Reminders - Dashboard alerts for upcoming prep
 
-### P2 (Medium Priority)
-- [ ] Push Notifications for prep reminders
-- [ ] Recipe scaling UI for family portions
-- [ ] Improved smart meal suggestions based on inventory
+### P2 (Medium Priority) - COMPLETED
+- [x] Push Notifications - Browser notification toggle
+- [x] Recipe scaling UI - Individual vs Family portions
 
 ### P3 (Low Priority/Future)
 - [ ] Integration with grocery delivery APIs (Target, etc.)
@@ -121,4 +132,4 @@ Working father with 2 kids, working towards 12% body fat goal.
 - [ ] Social sharing of progress
 
 ## Refactoring Needed
-- [ ] Break down App.js (1500+ lines) into smaller components
+- [ ] Break down App.js (1600+ lines) into smaller components
