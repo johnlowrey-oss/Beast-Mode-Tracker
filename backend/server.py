@@ -83,6 +83,8 @@ class RecipeRequest(BaseModel):
     meal_name: str
     meal_blueprint: str
     category: str
+    servings: str = "individual"  # "individual" or "family"
+    meal_id: Optional[str] = None
 
 # ==================== NEW MEAL PLANNING MODELS ====================
 
