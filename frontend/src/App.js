@@ -1405,6 +1405,17 @@ function App() {
         <PrepChecklistModal 
           tasks={prepTasks}
           onComplete={markPrepComplete}
+          extendedLibrary={extendedMealLibrary}
+          onGetRecipe={(mealId, mealType) => {
+            const mealData = extendedMealLibrary[mealType]?.find(m => m.id === mealId);
+            if (mealData) {
+              setSettings(prev => ({
+                ...prev,
+                selected_meals: { ...prev.selected_meals, [mealType]: mealData }
+              }));
+              generateRecipe(mealType, 'individual', mealId);
+            }
+          }}
         />
       </Modal>
 
