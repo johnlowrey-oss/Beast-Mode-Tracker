@@ -10,6 +10,8 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone, timedelta
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 import math
+from collections import defaultdict
+from meal_data import EXTENDED_MEAL_LIBRARY, SHOPPING_CATEGORIES, PREP_DAYS
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
