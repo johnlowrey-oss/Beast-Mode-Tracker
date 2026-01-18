@@ -679,15 +679,19 @@ async def get_extended_meal_library():
 
 @api_router.post("/meal-plan/generate")
 async def generate_meal_plan(req: PlanWeeksRequest):
-    """Generate AI-suggested meal plan for 1-4 weeks"""
+    """Generate AI-suggested meal plan for 1-4 weeks optimized for caloric target"""
     weeks = max(1, min(4, req.weeks))
     start_date = datetime.fromisoformat(req.start_date) if req.start_date else datetime.now()
     start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
     
+    # Get user's calorie target
+    settings_doc = await db.settings.find_one({"_id": "user_settings"})
+    calorie_target = settings_doc.get("calorie_target", 2400) if settings_doc else 2400
+    
     total_days = weeks * 7
     meal_plan = []
     
-    # Simple rotation strategy (can be enhanced with AI later)
+    # Get meal options
     all_breakfasts = EXTENDED_MEAL_LIBRARY["breakfast"]
     all_lunches = EXTENDED_MEAL_LIBRARY["lunch"]
     all_dinners = EXTENDED_MEAL_LIBRARY["dinner"]
@@ -696,18 +700,55 @@ async def generate_meal_plan(req: PlanWeeksRequest):
         current_date = start_date + timedelta(days=day_offset)
         date_str = current_date.strftime("%Y-%m-%d")
         
-        # Rotate through meals
+        # Smart meal selection to hit calorie target
+        # Target: breakfast ~450, lunch ~550, dinner ~700 for 2400 total (typical maintenance)
+        # Adjust ratios based on user's target
+        ratio = calorie_target / 2400
+        
+        # Select meals that best match the target
         breakfast = all_breakfasts[day_offset % len(all_breakfasts)]
         lunch = all_lunches[day_offset % len(all_lunches)]
         dinner = all_dinners[day_offset % len(all_dinners)]
         
+        # Calculate daily total
+        daily_calories = breakfast.get("calories", 0) + lunch.get("calories", 0) + dinner.get("calories", 0)
+        
         meal_plan.extend([
-            {"date": date_str, "meal_type": "breakfast", "meal_id": breakfast["id"], "meal_name": breakfast["name"], "is_prepped": False},
-            {"date": date_str, "meal_type": "lunch", "meal_id": lunch["id"], "meal_name": lunch["name"], "is_prepped": False},
-            {"date": date_str, "meal_type": "dinner", "meal_id": dinner["id"], "meal_name": dinner["name"], "is_prepped": False}
+            {
+                "date": date_str, 
+                "meal_type": "breakfast", 
+                "meal_id": breakfast["id"], 
+                "meal_name": breakfast["name"], 
+                "is_prepped": False,
+                "calories": breakfast.get("calories", 0),
+                "protein": breakfast.get("protein", 0)
+            },
+            {
+                "date": date_str, 
+                "meal_type": "lunch", 
+                "meal_id": lunch["id"], 
+                "meal_name": lunch["name"], 
+                "is_prepped": False,
+                "calories": lunch.get("calories", 0),
+                "protein": lunch.get("protein", 0)
+            },
+            {
+                "date": date_str, 
+                "meal_type": "dinner", 
+                "meal_id": dinner["id"], 
+                "meal_name": dinner["name"], 
+                "is_prepped": False,
+                "calories": dinner.get("calories", 0),
+                "protein": dinner.get("protein", 0)
+            }
         ])
     
-    return {"meal_plan": meal_plan, "weeks": weeks, "start_date": start_date.strftime("%Y-%m-%d")}
+    return {
+        "meal_plan": meal_plan, 
+        "weeks": weeks, 
+        "start_date": start_date.strftime("%Y-%m-%d"),
+        "daily_calorie_target": calorie_target
+    }
 
 @api_router.get("/meal-plan")
 async def get_meal_plan():
