@@ -94,11 +94,70 @@ function App() {
   const [aiResponse, setAiResponse] = useState(null);
   const [selectedWeeks, setSelectedWeeks] = useState(2);
   const [selectedDate, setSelectedDate] = useState(null);
+  
+  // Notification State
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState('default');
 
   // Load initial data
   useEffect(() => {
     loadAllData();
+    // Initialize notifications
+    initializeNotifications();
   }, []);
+  
+  // Initialize notifications on load
+  const initializeNotifications = async () => {
+    await registerServiceWorker();
+    const permission = Notification.permission || 'default';
+    setNotificationPermission(permission);
+    setNotificationsEnabled(permission === 'granted' && localStorage.getItem('beastHubNotifications') === 'true');
+  };
+  
+  // Toggle notifications
+  const toggleNotifications = async () => {
+    if (notificationsEnabled) {
+      // Disable notifications
+      setNotificationsEnabled(false);
+      localStorage.setItem('beastHubNotifications', 'false');
+    } else {
+      // Request permission and enable
+      const permission = await requestNotificationPermission();
+      setNotificationPermission(permission);
+      if (permission === 'granted') {
+        setNotificationsEnabled(true);
+        localStorage.setItem('beastHubNotifications', 'true');
+        // Show confirmation notification
+        showLocalNotification('Beast Hub Notifications Enabled', 'You\'ll receive prep reminders when meals need attention!');
+      }
+    }
+  };
+  
+  // Check for prep alerts and show notifications
+  const checkPrepNotifications = useCallback(() => {
+    if (!notificationsEnabled || !prepAlerts.has_urgent) return;
+    
+    const lastNotified = localStorage.getItem('lastPrepNotification');
+    const now = new Date().toDateString();
+    
+    // Only notify once per day
+    if (lastNotified !== now && prepAlerts.alerts.length > 0) {
+      const urgentAlerts = prepAlerts.alerts.filter(a => a.urgency === 'NOW');
+      if (urgentAlerts.length > 0) {
+        showLocalNotification(
+          'Prep Reminder',
+          `${urgentAlerts.length} meal(s) need prep today! Don't forget: ${urgentAlerts[0].meal_name}`,
+          { tag: 'prep-urgent' }
+        );
+        localStorage.setItem('lastPrepNotification', now);
+      }
+    }
+  }, [notificationsEnabled, prepAlerts]);
+  
+  // Check notifications when prep alerts change
+  useEffect(() => {
+    checkPrepNotifications();
+  }, [prepAlerts, checkPrepNotifications]);
 
   const loadAllData = async () => {
     try {
