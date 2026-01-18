@@ -103,6 +103,10 @@ function App() {
   // Notification State
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState('default');
+  
+  // Onboarding State
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
 
   // Load initial data
   useEffect(() => {
@@ -110,6 +114,13 @@ function App() {
     // Initialize notifications
     initializeNotifications();
   }, []);
+  
+  // Check if onboarding needed after data loads
+  useEffect(() => {
+    if (!loading && mealPlan.length === 0 && !localStorage.getItem('beastHubOnboarded')) {
+      setShowOnboarding(true);
+    }
+  }, [loading, mealPlan]);
   
   // Initialize notifications on load
   const initializeNotifications = async () => {
