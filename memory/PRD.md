@@ -33,22 +33,28 @@ Working father with 2 kids, working towards 12% body fat goal.
   - Calorie target setting and tracking
   - Complete meal planning system (generate, save, update/swap)
   - Shopping list generation and tracking
-  - Inventory management (auto-add when purchased)
+  - Inventory management with full CRUD (add, edit, delete)
   - Prep task management for batch cooking
   - Today's smart suggestions based on prep status
 - **Frontend:**
   - Dashboard with all tracking widgets
   - Momentum section with 2-day rule tracking
   - Body Analytics with progress bars
-  - Meal Planner modal with swap functionality (FIXED)
+  - Meal Planner modal with swap functionality
   - Shopping List modal
   - Prep Checklist modal
-  - Inventory modal
+  - Inventory modal with manual editing (add, edit quantity, delete)
   - AI Response formatting for recipes
   - Calorie settings modal
 
 ### Bug Fixes
-- [FIXED] Meal swap UI not updating (Dec 2025) - Root cause: `setMealPlan` wasn't passed to MealPlannerModal component
+- [FIXED] Meal swap UI not updating (Dec 2025) - Root cause: `setMealPlan` wasn't passed to MealPlannerModal
+- [FIXED] Shopping list toggle adds to inventory but doesn't remove when unchecked (Dec 2025) - Added delete_one call when unchecking
+- [FIXED] Settings endpoint missing defaults causing frontend crash (Dec 2025)
+
+### New Features (Dec 2025)
+- Manual inventory editing: Add items, edit quantities, delete items
+- Ingredients auto-deducted from inventory when marking prep complete
 
 ## Architecture
 ```
@@ -56,7 +62,9 @@ Working father with 2 kids, working towards 12% body fat goal.
 ├── backend/
 │   ├── .env (MONGO_URL, DB_NAME, EMERGENT_LLM_KEY)
 │   ├── meal_data.py (Extended meal library with metadata)
-│   └── server.py (FastAPI with all APIs)
+│   ├── server.py (FastAPI with all APIs)
+│   └── tests/
+│       └── test_inventory_features.py
 ├── frontend/
 │   ├── .env (REACT_APP_BACKEND_URL)
 │   └── src/
@@ -70,7 +78,12 @@ Working father with 2 kids, working towards 12% body fat goal.
 - `POST /api/meal-plan/generate` - Generate meal plan
 - `POST /api/meal-plan/save` - Save meal plan
 - `POST /api/meal-plan/update-meal` - Swap a meal in the plan
+- `POST /api/meal-plan/mark-prepped` - Mark meal prepped (deducts ingredients)
 - `GET /api/shopping-list/generate` - Generate shopping list
+- `POST /api/shopping-list/toggle-purchased` - Toggle item (adds/removes from inventory)
+- `POST /api/inventory/add` - Manually add item
+- `POST /api/inventory/update` - Update item quantity
+- `DELETE /api/inventory/{item_name}` - Remove item
 - `POST /api/ai/recipe` - Generate recipe using AI
 - `POST /api/ai/motivation` - Get motivational message
 
@@ -90,16 +103,16 @@ Working father with 2 kids, working towards 12% body fat goal.
 
 ### P0 (Critical) - COMPLETED
 - [x] Meal swap UI update bug
+- [x] Shopping list toggle inventory bug
+- [x] Manual inventory editing
 
 ### P1 (High Priority)
-- [ ] Shopping List Generation UI improvements
-- [ ] Prep Day Reminders - Highlight meals needing advance prep
+- [ ] Prep Day Reminders - Highlight meals needing advance prep more prominently
 
 ### P2 (Medium Priority)
-- [ ] Inventory Management System - Manual add/remove items
-- [ ] Smart Meal Suggestions based on inventory
 - [ ] Push Notifications for prep reminders
 - [ ] Recipe scaling UI for family portions
+- [ ] Improved smart meal suggestions based on inventory
 
 ### P3 (Low Priority/Future)
 - [ ] Integration with grocery delivery APIs (Target, etc.)
@@ -108,8 +121,4 @@ Working father with 2 kids, working towards 12% body fat goal.
 - [ ] Social sharing of progress
 
 ## Refactoring Needed
-- [ ] Break down App.js (1400+ lines) into smaller components:
-  - MealPlannerModal.js
-  - ShoppingListModal.js
-  - DashboardWidgets.js
-  - etc.
+- [ ] Break down App.js (1500+ lines) into smaller components
