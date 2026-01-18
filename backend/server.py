@@ -847,7 +847,7 @@ async def get_prep_tasks():
 
 @api_router.post("/meal-plan/mark-prepped")
 async def mark_meal_prepped(meal_id: str, dates: List[str]):
-    """Mark a batch-prepped meal as ready for specific dates"""
+    """Mark a batch-prepped meal as ready for specific dates and deduct ingredients from inventory"""
     plan_doc = await db.meal_plan.find_one({"_id": "user_meal_plan"})
     if not plan_doc:
         raise HTTPException(status_code=404, detail="No meal plan found")
@@ -866,7 +866,28 @@ async def mark_meal_prepped(meal_id: str, dates: List[str]):
         {"$set": {"meals": meals}}
     )
     
-    return {"success": True}
+    # Deduct ingredients from inventory for this meal
+    meal_data = None
+    for category_meals in EXTENDED_MEAL_LIBRARY.values():
+        for m in category_meals:
+            if m["id"] == meal_id:
+                meal_data = m
+                break
+        if meal_data:
+            break
+    
+    if meal_data:
+        ingredients_used = []
+        for ingredient in meal_data.get("ingredients", []):
+            item_name = ingredient["item"]
+            # Remove the ingredient from inventory
+            result = await db.inventory.delete_one({"item": item_name})
+            if result.deleted_count > 0:
+                ingredients_used.append(item_name)
+        
+        return {"success": True, "ingredients_deducted": ingredients_used}
+    
+    return {"success": True, "ingredients_deducted": []}
 
 @api_router.get("/shopping-list/generate")
 async def generate_shopping_list():
