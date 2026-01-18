@@ -1225,25 +1225,138 @@ function PrepChecklistModal({ tasks, onComplete }) {
 }
 
 // Inventory Modal
-function InventoryModal({ inventory }) {
+function InventoryModal({ inventory, setInventory }) {
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  const [newItem, setNewItem] = useState({ item: '', amount: '', category: 'Produce' });
+  const [editAmount, setEditAmount] = useState('');
+
   const categories = [...new Set(inventory.map(item => item.category))];
+  const allCategories = ['Protein', 'Produce', 'Dairy', 'Pantry', 'Frozen'];
+
+  const handleAddItem = async () => {
+    if (!newItem.item.trim() || !newItem.amount.trim()) return;
+    
+    try {
+      const res = await axios.post(`${BACKEND_URL}/api/inventory/add`, newItem);
+      setInventory(res.data.inventory);
+      setNewItem({ item: '', amount: '', category: 'Produce' });
+      setShowAddForm(false);
+    } catch (error) {
+      console.error("Error adding item:", error);
+      alert(`Failed to add item: ${error.response?.data?.detail || error.message}`);
+    }
+  };
+
+  const handleUpdateItem = async (itemName) => {
+    if (!editAmount.trim()) return;
+    
+    try {
+      const res = await axios.post(`${BACKEND_URL}/api/inventory/update`, {
+        item: itemName,
+        amount: editAmount
+      });
+      setInventory(res.data.inventory);
+      setEditingItem(null);
+      setEditAmount('');
+    } catch (error) {
+      console.error("Error updating item:", error);
+      alert(`Failed to update item: ${error.response?.data?.detail || error.message}`);
+    }
+  };
+
+  const handleDeleteItem = async (itemName) => {
+    if (!confirm(`Remove "${itemName}" from inventory?`)) return;
+    
+    try {
+      const res = await axios.delete(`${BACKEND_URL}/api/inventory/${encodeURIComponent(itemName)}`);
+      setInventory(res.data.inventory);
+    } catch (error) {
+      console.error("Error deleting item:", error);
+      alert(`Failed to delete item: ${error.response?.data?.detail || error.message}`);
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {inventory.length === 0 ? (
+      {/* Add Item Button */}
+      <div className="flex justify-between items-center">
+        <p className="text-sm text-slate-400">
+          {inventory.length > 0 ? `${inventory.length} ingredients in stock` : 'No ingredients tracked yet'}
+        </p>
+        <button
+          onClick={() => setShowAddForm(!showAddForm)}
+          className="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-lg text-xs font-bold uppercase flex items-center gap-2 transition"
+          data-testid="add-inventory-btn"
+        >
+          <Plus className="w-4 h-4" /> Add Item
+        </button>
+      </div>
+
+      {/* Add Item Form */}
+      {showAddForm && (
+        <div className="bg-slate-700/50 rounded-xl p-4 border border-slate-600 space-y-3">
+          <h4 className="text-xs font-black uppercase text-emerald-400">Add New Item</h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <input
+              type="text"
+              placeholder="Item name"
+              value={newItem.item}
+              onChange={(e) => setNewItem({ ...newItem, item: e.target.value })}
+              className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+              data-testid="new-item-name"
+            />
+            <input
+              type="text"
+              placeholder="Amount (e.g., 2 lbs)"
+              value={newItem.amount}
+              onChange={(e) => setNewItem({ ...newItem, amount: e.target.value })}
+              className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+              data-testid="new-item-amount"
+            />
+            <select
+              value={newItem.category}
+              onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
+              className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+              data-testid="new-item-category"
+            >
+              {allCategories.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleAddItem}
+              className="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-lg text-xs font-bold uppercase transition"
+              data-testid="confirm-add-item"
+            >
+              Add to Stock
+            </button>
+            <button
+              onClick={() => { setShowAddForm(false); setNewItem({ item: '', amount: '', category: 'Produce' }); }}
+              className="bg-slate-600 hover:bg-slate-500 px-4 py-2 rounded-lg text-xs font-bold uppercase transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {inventory.length === 0 && !showAddForm ? (
         <div className="text-center py-10">
           <p className="text-slate-400">No ingredients tracked yet</p>
-          <p className="text-xs text-slate-500 mt-2">Items are auto-added when you check them off the shopping list</p>
+          <p className="text-xs text-slate-500 mt-2">Items are auto-added when you check them off the shopping list, or add them manually above</p>
         </div>
       ) : (
         <>
-          <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4">
-            <p className="text-sm text-emerald-300">
-              <strong>{inventory.length}</strong> ingredients in stock
+          <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3">
+            <p className="text-xs text-blue-300">
+              💡 <strong>Tip:</strong> Ingredients are automatically removed when you mark a meal as prepped
             </p>
           </div>
 
-          {categories.map((category) => {
+          {(categories.length > 0 ? categories : []).map((category) => {
             const categoryItems = inventory.filter(item => item.category === category);
             if (categoryItems.length === 0) return null;
 
@@ -1257,15 +1370,61 @@ function InventoryModal({ inventory }) {
                   {categoryItems.map((item, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between p-3 rounded-lg bg-slate-700/50 border border-slate-600/50"
+                      className="flex items-center justify-between p-3 rounded-lg bg-slate-700/50 border border-slate-600/50 hover:border-slate-500 transition"
                     >
-                      <div>
+                      <div className="flex-grow">
                         <p className="text-sm font-bold">{item.item}</p>
-                        <p className="text-[10px] text-slate-400">{item.amount}</p>
+                        {editingItem === item.item ? (
+                          <div className="flex items-center gap-2 mt-1">
+                            <input
+                              type="text"
+                              value={editAmount}
+                              onChange={(e) => setEditAmount(e.target.value)}
+                              placeholder={item.amount}
+                              className="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs w-24 focus:border-blue-500 focus:outline-none"
+                              autoFocus
+                              data-testid={`edit-amount-${item.item}`}
+                            />
+                            <button
+                              onClick={() => handleUpdateItem(item.item)}
+                              className="text-emerald-400 hover:text-emerald-300 text-xs font-bold"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => { setEditingItem(null); setEditAmount(''); }}
+                              className="text-slate-400 hover:text-slate-300 text-xs"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-[10px] text-slate-400">{item.amount}</p>
+                        )}
                       </div>
-                      <div className="text-right">
-                        <p className="text-[9px] text-slate-500 uppercase">Purchased</p>
-                        <p className="text-xs text-slate-400">{item.purchased_date}</p>
+                      <div className="flex items-center gap-3">
+                        <div className="text-right">
+                          <p className="text-[9px] text-slate-500 uppercase">Purchased</p>
+                          <p className="text-xs text-slate-400">{item.purchased_date}</p>
+                        </div>
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => { setEditingItem(item.item); setEditAmount(item.amount); }}
+                            className="p-1.5 hover:bg-slate-600 rounded transition text-blue-400 hover:text-blue-300"
+                            title="Edit quantity"
+                            data-testid={`edit-btn-${item.item}`}
+                          >
+                            <Settings className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteItem(item.item)}
+                            className="p-1.5 hover:bg-red-500/20 rounded transition text-red-400 hover:text-red-300"
+                            title="Remove from inventory"
+                            data-testid={`delete-btn-${item.item}`}
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
