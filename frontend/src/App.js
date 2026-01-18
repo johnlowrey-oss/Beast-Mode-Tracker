@@ -240,6 +240,9 @@ function App() {
       // Reload inventory since ingredients were deducted
       const invRes = await axios.get(`${API}/inventory`);
       setInventory(invRes.data.inventory);
+      // Reload prep alerts
+      const alertsRes = await axios.get(`${API}/meal-plan/prep-alerts`);
+      setPrepAlerts(alertsRes.data || { alerts: [], has_urgent: false });
       loadTodaySuggestions();
       
       // Show feedback about deducted ingredients
