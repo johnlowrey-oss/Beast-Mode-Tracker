@@ -1414,7 +1414,7 @@ function App() {
                 ...prev,
                 selected_meals: { ...prev.selected_meals, [mealType]: mealData }
               }));
-              generateRecipe(mealType, 'individual', mealId);
+              generateRecipe(mealType, 'individual', mealId, mealData);
             }
           }}
         />
