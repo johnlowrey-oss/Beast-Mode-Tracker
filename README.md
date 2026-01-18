@@ -119,7 +119,7 @@ EMERGENT_LLM_KEY=sk-emergent-d45DaCc0fFeE35152E
 
 Frontend `.env` file (`/app/frontend/.env`):
 ```bash
-REACT_APP_BACKEND_URL=https://physique-hub.preview.emergentagent.com
+REACT_APP_BACKEND_URL=https://beast-hub.preview.emergentagent.com
 WDS_SOCKET_PORT=443
 ENABLE_HEALTH_CHECK=false
 ```
@@ -148,7 +148,7 @@ tail -f /var/log/supervisor/frontend.*.log
 ## 📡 API Documentation
 
 ### Base URL
-`https://physique-hub.preview.emergentagent.com/api`
+`https://beast-hub.preview.emergentagent.com/api`
 
 ### Endpoints
 
