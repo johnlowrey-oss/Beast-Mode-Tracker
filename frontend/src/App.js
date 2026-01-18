@@ -569,7 +569,252 @@ function App() {
         </div>
       </header>
 
+      {/* Onboarding Modal */}
+      {showOnboarding && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-slate-800 rounded-2xl border border-slate-700 max-w-md w-full p-6 shadow-2xl">
+            {onboardingStep === 0 && (
+              <div className="text-center space-y-4">
+                <div className="text-5xl">💪</div>
+                <h2 className="text-2xl font-black text-blue-400">Welcome to Beast Hub!</h2>
+                <p className="text-slate-300">Your personal transformation command center. Let's get you set up in 3 quick steps.</p>
+                <button 
+                  onClick={() => setOnboardingStep(1)}
+                  className="w-full bg-gradient-to-r from-blue-600 to-emerald-600 py-3 rounded-xl font-bold uppercase"
+                >
+                  Let's Go →
+                </button>
+              </div>
+            )}
+            {onboardingStep === 1 && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 text-emerald-400">
+                  <span className="bg-emerald-600/20 w-8 h-8 rounded-full flex items-center justify-center font-bold">1</span>
+                  <h3 className="font-bold">Set Your Calorie Target</h3>
+                </div>
+                <p className="text-sm text-slate-400">This helps us suggest meals that fit your goals.</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: 1800, label: 'Aggressive Cut' },
+                    { value: 2100, label: 'Moderate Cut' },
+                    { value: 2400, label: 'Maintenance' },
+                    { value: 2700, label: 'Lean Bulk' }
+                  ].map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={async () => {
+                        await axios.post(`${API}/settings/calories`, { calorie_target: opt.value });
+                        setSettings(prev => ({ ...prev, calorie_target: opt.value }));
+                        setOnboardingStep(2);
+                      }}
+                      className="p-3 bg-slate-700 rounded-xl hover:bg-slate-600 transition text-left"
+                    >
+                      <p className="font-bold text-emerald-400">{opt.value} cal</p>
+                      <p className="text-xs text-slate-400">{opt.label}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {onboardingStep === 2 && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 text-blue-400">
+                  <span className="bg-blue-600/20 w-8 h-8 rounded-full flex items-center justify-center font-bold">2</span>
+                  <h3 className="font-bold">Generate Your Meal Plan</h3>
+                </div>
+                <p className="text-sm text-slate-400">We'll create a personalized meal plan with shopping list.</p>
+                <div className="flex gap-2 mb-4">
+                  {[1, 2, 3, 4].map(w => (
+                    <button
+                      key={w}
+                      onClick={() => setSelectedWeeks(w)}
+                      className={`flex-1 py-2 rounded-lg font-bold transition ${selectedWeeks === w ? 'bg-blue-600' : 'bg-slate-700 hover:bg-slate-600'}`}
+                    >
+                      {w}W
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={async () => {
+                    await generateMealPlan();
+                    setOnboardingStep(3);
+                  }}
+                  disabled={aiLoading}
+                  className="w-full bg-gradient-to-r from-blue-600 to-emerald-600 py-3 rounded-xl font-bold uppercase disabled:opacity-50"
+                >
+                  {aiLoading ? 'Generating...' : `Generate ${selectedWeeks}-Week Plan`}
+                </button>
+              </div>
+            )}
+            {onboardingStep === 3 && (
+              <div className="text-center space-y-4">
+                <div className="text-5xl">🎉</div>
+                <h2 className="text-2xl font-black text-emerald-400">You're All Set!</h2>
+                <p className="text-slate-300">Your meal plan and shopping list are ready. Here's your daily flow:</p>
+                <div className="text-left space-y-2 bg-slate-700/50 rounded-xl p-4">
+                  <p className="text-sm"><span className="text-blue-400 font-bold">Daily:</span> Check habits, log meals & workouts</p>
+                  <p className="text-sm"><span className="text-emerald-400 font-bold">Shop Day:</span> Use shopping list → Stock tab</p>
+                  <p className="text-sm"><span className="text-amber-400 font-bold">Prep Day:</span> Batch cook from Prep tab</p>
+                </div>
+                <button 
+                  onClick={() => {
+                    setShowOnboarding(false);
+                    localStorage.setItem('beastHubOnboarded', 'true');
+                  }}
+                  className="w-full bg-gradient-to-r from-blue-600 to-emerald-600 py-3 rounded-xl font-bold uppercase"
+                >
+                  Start Tracking →
+                </button>
+              </div>
+            )}
+            {onboardingStep < 3 && (
+              <button 
+                onClick={() => {
+                  setShowOnboarding(false);
+                  localStorage.setItem('beastHubOnboarded', 'true');
+                }}
+                className="w-full mt-4 text-xs text-slate-500 hover:text-slate-400"
+              >
+                Skip for now
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <main className="max-w-4xl mx-auto px-4 space-y-6">
+        
+        {/* Goal Progress Bar */}
+        {metrics.length > 0 && (
+          <section className="bg-gradient-to-r from-purple-900/20 to-blue-900/20 rounded-2xl border border-purple-500/20 p-4" data-testid="goal-progress">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-xs font-bold uppercase tracking-widest text-purple-400 flex items-center gap-2">
+                <Zap className="w-3 h-3" /> Goal: 12% Body Fat
+              </h2>
+              <span className="text-xs text-slate-400">
+                {metrics[0]?.body_fat ? `Current: ${metrics[0].body_fat.toFixed(1)}%` : 'Log metrics to track'}
+              </span>
+            </div>
+            <div className="relative h-3 bg-slate-700 rounded-full overflow-hidden">
+              {metrics[0]?.body_fat && (
+                <>
+                  {/* Progress bar showing how close to 12% goal */}
+                  <div 
+                    className="absolute left-0 top-0 h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, Math.max(0, ((25 - metrics[0].body_fat) / (25 - 12)) * 100))}%` }}
+                  />
+                  {/* Goal marker at 12% */}
+                  <div className="absolute right-0 top-0 h-full w-1 bg-emerald-400" title="12% Goal" />
+                </>
+              )}
+            </div>
+            <div className="flex justify-between mt-1 text-[9px] text-slate-500">
+              <span>25%</span>
+              <span className="text-emerald-400 font-bold">12% Goal →</span>
+            </div>
+          </section>
+        )}
+
+        {/* TODAY'S FOCUS - Primary Action Card */}
+        <section className="bg-slate-800 rounded-2xl border border-slate-700 p-5 shadow-xl" data-testid="todays-focus">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-blue-400" /> Today's Focus
+          </h2>
+          
+          <div className="grid grid-cols-3 gap-3">
+            {/* Habit Toggle - Prominent */}
+            <button 
+              onClick={async () => {
+                const today = new Date().toISOString().split('T')[0];
+                await axios.post(`${API}/habits/${today}`, { completed: !habits[today] });
+                setHabits(prev => ({ ...prev, [today]: !prev[today] }));
+              }}
+              className={`col-span-1 p-4 rounded-xl border-2 transition-all ${
+                habits[new Date().toISOString().split('T')[0]] 
+                  ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' 
+                  : 'bg-slate-700/50 border-slate-600 hover:border-blue-500'
+              }`}
+              data-testid="today-habit-toggle"
+            >
+              <div className="flex flex-col items-center gap-2">
+                {habits[new Date().toISOString().split('T')[0]] ? (
+                  <CheckCircle2 className="w-8 h-8" />
+                ) : (
+                  <Circle className="w-8 h-8" />
+                )}
+                <span className="text-xs font-bold uppercase">Daily Habit</span>
+              </div>
+            </button>
+            
+            {/* Workout Status */}
+            <button 
+              onClick={() => setActiveModal('workout')}
+              className={`col-span-1 p-4 rounded-xl border-2 transition-all ${
+                todayWorkout 
+                  ? 'bg-blue-500/20 border-blue-500 text-blue-400' 
+                  : 'bg-slate-700/50 border-slate-600 hover:border-blue-500'
+              }`}
+              data-testid="today-workout-toggle"
+            >
+              <div className="flex flex-col items-center gap-2">
+                {todayWorkout ? (
+                  <CheckCircle2 className="w-8 h-8" />
+                ) : (
+                  <Dumbbell className="w-8 h-8" />
+                )}
+                <span className="text-xs font-bold uppercase">
+                  {todayWorkout ? 'Logged' : (todayPlan?.training || 'Workout')}
+                </span>
+              </div>
+            </button>
+            
+            {/* Meals Status */}
+            <div className="col-span-1 p-4 rounded-xl bg-slate-700/50 border-2 border-slate-600">
+              <div className="flex flex-col items-center gap-2">
+                <div className="flex items-center gap-1">
+                  {todaySuggestions && ['breakfast', 'lunch', 'dinner'].map((meal, i) => {
+                    const status = todaySuggestions[meal]?.status;
+                    const isReady = status === 'ready_to_eat' || status === 'can_make_now';
+                    return (
+                      <div 
+                        key={meal}
+                        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                          isReady ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-600 text-slate-400'
+                        }`}
+                      >
+                        {isReady ? '✓' : i + 1}
+                      </div>
+                    );
+                  })}
+                </div>
+                <span className="text-xs font-bold uppercase text-slate-400">Meals</span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Quick Actions */}
+          <div className="flex gap-2 mt-4">
+            <button 
+              onClick={() => setActiveModal('meal-planner')}
+              className="flex-1 bg-slate-700 hover:bg-slate-600 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1"
+            >
+              <Utensils className="w-3 h-3" /> Meals
+            </button>
+            <button 
+              onClick={() => setActiveModal('shopping-list')}
+              className="flex-1 bg-slate-700 hover:bg-slate-600 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1"
+            >
+              <ShoppingCart className="w-3 h-3" /> Shop
+            </button>
+            <button 
+              onClick={() => setActiveModal('prep-checklist')}
+              className="flex-1 bg-slate-700 hover:bg-slate-600 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1"
+            >
+              <ChefHat className="w-3 h-3" /> Prep
+            </button>
+          </div>
+        </section>
+
         {/* Today's Smart Suggestions - NEW! */}
         {todaySuggestions && mealPlan.length > 0 && (
           <section className="card bg-gradient-to-r from-blue-900/30 to-emerald-900/30 border border-blue-500/30 rounded-2xl p-6 shadow-xl" data-testid="smart-suggestions">
