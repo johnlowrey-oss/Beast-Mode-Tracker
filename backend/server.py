@@ -79,10 +79,6 @@ class RecipeRequest(BaseModel):
     meal_name: str
     meal_blueprint: str
     category: str
-    
-    @property
-    def blueprint(self):
-        return self.meal_blueprint
 
 # ==================== MEAL LIBRARY ====================
 
