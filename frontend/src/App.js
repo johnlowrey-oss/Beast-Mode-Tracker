@@ -1274,3 +1274,73 @@ function FormattedAIResponse({ content }) {
     </div>
   );
 }
+
+// Calorie Settings Modal
+function CalorieSettingsModal({ currentTarget, onSave }) {
+  const [target, setTarget] = useState(currentTarget);
+
+  const presets = [
+    { label: "Aggressive Cut", value: 1800, desc: "Fast fat loss (-2 lbs/week)" },
+    { label: "Moderate Cut", value: 2100, desc: "Steady loss (-1 lb/week)" },
+    { label: "Maintenance", value: 2400, desc: "Hold weight, recomp" },
+    { label: "Lean Bulk", value: 2700, desc: "Slow muscle gain" }
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+        <p className="text-sm text-blue-300 mb-2">
+          Your calorie target determines which meals are suggested to hit your daily goal.
+        </p>
+        <p className="text-xs text-slate-400">
+          For 12% body fat goal: Start with maintenance, then adjust based on progress.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">Quick Presets</label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {presets.map((preset) => (
+            <button
+              key={preset.value}
+              onClick={() => setTarget(preset.value)}
+              className={`p-4 rounded-xl text-left transition ${
+                target === preset.value
+                  ? 'bg-emerald-600 border-2 border-emerald-400'
+                  : 'bg-slate-700 border-2 border-slate-600 hover:border-slate-500'
+              }`}
+            >
+              <p className="font-bold text-sm mb-1">{preset.label}</p>
+              <p className="text-2xl font-black text-emerald-400">{preset.value} cal</p>
+              <p className="text-[10px] text-slate-400 mt-1">{preset.desc}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-bold text-slate-300 mb-2 uppercase tracking-wider">Custom Target</label>
+        <input
+          type="number"
+          value={target}
+          onChange={(e) => setTarget(parseInt(e.target.value) || 2400)}
+          className="w-full bg-slate-700 border border-slate-600 rounded-lg p-4 text-white text-2xl font-bold text-center"
+          step="100"
+        />
+      </div>
+
+      <button
+        onClick={() => onSave(target)}
+        className="w-full bg-gradient-to-r from-emerald-600 to-blue-600 py-4 rounded-xl font-black uppercase tracking-widest text-white shadow-lg hover:scale-105 transition"
+      >
+        Save Target: {target} Calories
+      </button>
+
+      <div className="text-xs text-slate-500 space-y-1">
+        <p>💡 Meal plan will auto-suggest meals to hit this target</p>
+        <p>📊 Track progress in Body Analytics dashboard</p>
+        <p>🎯 Adjust weekly based on scale and mirror feedback</p>
+      </div>
+    </div>
+  );
+}
