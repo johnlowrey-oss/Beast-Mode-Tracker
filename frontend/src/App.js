@@ -228,13 +228,21 @@ function App() {
 
   const markPrepComplete = async (mealId, dates) => {
     try {
-      await axios.post(`${API}/meal-plan/mark-prepped?meal_id=${mealId}`, dates);
+      const response = await axios.post(`${API}/meal-plan/mark-prepped?meal_id=${mealId}`, dates);
       // Reload meal plan and prep tasks
       const planRes = await axios.get(`${API}/meal-plan`);
       setMealPlan(planRes.data.meal_plan);
       const prepRes = await axios.get(`${API}/meal-plan/prep-tasks`);
       setPrepTasks(prepRes.data.prep_tasks);
+      // Reload inventory since ingredients were deducted
+      const invRes = await axios.get(`${API}/inventory`);
+      setInventory(invRes.data.inventory);
       loadTodaySuggestions();
+      
+      // Show feedback about deducted ingredients
+      if (response.data.ingredients_deducted?.length > 0) {
+        console.log('Ingredients used:', response.data.ingredients_deducted);
+      }
     } catch (error) {
       console.error("Error marking prep complete:", error);
     }
