@@ -2080,3 +2080,220 @@ function CalorieSettingsModal({ currentTarget, onSave }) {
     </div>
   );
 }
+
+// Workout Logger Modal
+function WorkoutModal({ todayWorkout, setTodayWorkout, todayPlan, onClose, reloadData }) {
+  const today = new Date().toISOString().split('T')[0];
+  const [workoutType, setWorkoutType] = useState(todayWorkout?.workout_type || todayPlan?.training || 'Custom');
+  const [duration, setDuration] = useState(todayWorkout?.duration_minutes || 45);
+  const [exercises, setExercises] = useState(todayWorkout?.exercises || []);
+  const [newExercise, setNewExercise] = useState({ exercise: '', sets: 3, reps: 10, weight: 0 });
+  const [saving, setSaving] = useState(false);
+
+  const workoutTypes = [
+    "Lower A (Squat Focus)",
+    "Upper A (Bench Focus)", 
+    "Lower B (Deadlift Focus)",
+    "Upper B (OHP Focus)",
+    "Full Body",
+    "Cardio/HIIT",
+    "Active Recovery",
+    "Custom"
+  ];
+
+  const commonExercises = {
+    "Lower A (Squat Focus)": ["Back Squat", "Leg Press", "Romanian Deadlift", "Leg Curl", "Calf Raises"],
+    "Upper A (Bench Focus)": ["Bench Press", "Incline DB Press", "Cable Flyes", "Tricep Pushdowns", "Lateral Raises"],
+    "Lower B (Deadlift Focus)": ["Deadlift", "Front Squat", "Hip Thrust", "Leg Extension", "Nordic Curls"],
+    "Upper B (OHP Focus)": ["Overhead Press", "Pull-ups", "Barbell Row", "Face Pulls", "Bicep Curls"],
+    "Full Body": ["Squat", "Bench Press", "Deadlift", "Pull-ups", "Shoulder Press"],
+    "Cardio/HIIT": ["Sprints", "Rowing", "Bike Intervals", "Jump Rope", "Burpees"],
+    "Active Recovery": ["Walking", "Light Stretching", "Yoga", "Swimming", "Mobility Work"]
+  };
+
+  const addExercise = () => {
+    if (!newExercise.exercise.trim()) return;
+    setExercises([...exercises, { ...newExercise }]);
+    setNewExercise({ exercise: '', sets: 3, reps: 10, weight: exercises.length > 0 ? exercises[exercises.length-1].weight : 0 });
+  };
+
+  const removeExercise = (index) => {
+    setExercises(exercises.filter((_, i) => i !== index));
+  };
+
+  const saveWorkout = async () => {
+    setSaving(true);
+    try {
+      await axios.post(`${BACKEND_URL}/api/workouts`, {
+        date: today,
+        workout_type: workoutType,
+        exercises: exercises,
+        duration_minutes: duration,
+        notes: ""
+      });
+      await reloadData();
+      onClose();
+    } catch (error) {
+      console.error("Error saving workout:", error);
+      alert(`Failed to save workout: ${error.response?.data?.detail || error.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const suggestedExercises = commonExercises[workoutType] || commonExercises["Custom"] || [];
+
+  return (
+    <div className="space-y-6">
+      {/* Workout Type */}
+      <div>
+        <label className="block text-xs font-bold text-slate-300 mb-2 uppercase tracking-wider">Workout Type</label>
+        <select
+          value={workoutType}
+          onChange={(e) => setWorkoutType(e.target.value)}
+          className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white font-bold"
+          data-testid="workout-type-select"
+        >
+          {workoutTypes.map((type) => (
+            <option key={type} value={type}>{type}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Duration */}
+      <div>
+        <label className="block text-xs font-bold text-slate-300 mb-2 uppercase tracking-wider">Duration (minutes)</label>
+        <input
+          type="number"
+          value={duration}
+          onChange={(e) => setDuration(parseInt(e.target.value) || 0)}
+          className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white text-xl font-bold text-center"
+          min="0"
+          max="300"
+          data-testid="workout-duration"
+        />
+      </div>
+
+      {/* Exercise Log */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Exercises ({exercises.length})</label>
+          {suggestedExercises.length > 0 && (
+            <span className="text-[9px] text-slate-500">Tap suggestions below</span>
+          )}
+        </div>
+
+        {/* Suggested Exercises */}
+        <div className="flex flex-wrap gap-1 mb-3">
+          {suggestedExercises.map((ex) => (
+            <button
+              key={ex}
+              onClick={() => setNewExercise({ ...newExercise, exercise: ex })}
+              className={`text-[10px] px-2 py-1 rounded transition ${
+                newExercise.exercise === ex 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+              }`}
+            >
+              {ex}
+            </button>
+          ))}
+        </div>
+
+        {/* Add Exercise Form */}
+        <div className="bg-slate-700/50 rounded-xl p-3 border border-slate-600 space-y-2">
+          <input
+            type="text"
+            placeholder="Exercise name"
+            value={newExercise.exercise}
+            onChange={(e) => setNewExercise({ ...newExercise, exercise: e.target.value })}
+            className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            data-testid="exercise-name-input"
+          />
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="text-[9px] text-slate-500 uppercase">Sets</label>
+              <input
+                type="number"
+                value={newExercise.sets}
+                onChange={(e) => setNewExercise({ ...newExercise, sets: parseInt(e.target.value) || 0 })}
+                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-2 py-1 text-sm text-center"
+                min="1"
+                max="20"
+                data-testid="exercise-sets-input"
+              />
+            </div>
+            <div>
+              <label className="text-[9px] text-slate-500 uppercase">Reps</label>
+              <input
+                type="number"
+                value={newExercise.reps}
+                onChange={(e) => setNewExercise({ ...newExercise, reps: parseInt(e.target.value) || 0 })}
+                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-2 py-1 text-sm text-center"
+                min="1"
+                max="100"
+                data-testid="exercise-reps-input"
+              />
+            </div>
+            <div>
+              <label className="text-[9px] text-slate-500 uppercase">Weight</label>
+              <input
+                type="number"
+                value={newExercise.weight}
+                onChange={(e) => setNewExercise({ ...newExercise, weight: parseFloat(e.target.value) || 0 })}
+                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-2 py-1 text-sm text-center"
+                min="0"
+                step="2.5"
+                data-testid="exercise-weight-input"
+              />
+            </div>
+          </div>
+          <button
+            onClick={addExercise}
+            disabled={!newExercise.exercise.trim()}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed py-2 rounded-lg text-xs font-bold uppercase transition"
+            data-testid="add-exercise-btn"
+          >
+            + Add Exercise
+          </button>
+        </div>
+
+        {/* Logged Exercises */}
+        {exercises.length > 0 && (
+          <div className="mt-3 space-y-1">
+            {exercises.map((ex, idx) => (
+              <div key={idx} className="flex items-center justify-between p-2 bg-slate-700/30 rounded-lg">
+                <div>
+                  <p className="font-medium text-sm">{ex.exercise}</p>
+                  <p className="text-[10px] text-slate-400">{ex.sets}x{ex.reps} @ {ex.weight} lbs</p>
+                </div>
+                <button
+                  onClick={() => removeExercise(idx)}
+                  className="p-1 hover:bg-red-500/20 rounded text-red-400 hover:text-red-300 transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Save Button */}
+      <button
+        onClick={saveWorkout}
+        disabled={saving}
+        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 py-4 rounded-xl font-black uppercase tracking-widest text-white shadow-lg hover:scale-105 transition disabled:opacity-50"
+        data-testid="save-workout-btn"
+      >
+        {saving ? 'Saving...' : `Save Workout (${exercises.length} exercises)`}
+      </button>
+
+      {/* Tip */}
+      <div className="text-xs text-slate-500 space-y-1">
+        <p>💪 Log your key compound lifts to track progress</p>
+        <p>📈 Weight × Sets × Reps = Volume (track this for gains)</p>
+      </div>
+    </div>
+  );
+}
