@@ -926,6 +926,142 @@ function App() {
             </div>
           </section>
         </div>
+
+        {/* Weekly Summary Section */}
+        {weeklySummary && (
+          <section className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl border border-slate-700 p-6 shadow-xl" data-testid="weekly-summary">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                <BarChart2 className="w-4 h-4 text-emerald-400" />
+                Weekly Summary
+              </h2>
+              <button 
+                onClick={async () => {
+                  setAiLoading(true);
+                  setActiveModal('ai-response');
+                  setAiResponse({ title: 'Weekly Coaching', content: 'Analyzing your week...' });
+                  try {
+                    const res = await axios.post(`${API}/ai/weekly-coaching`);
+                    setAiResponse({ title: 'Weekly Coaching', content: res.data.coaching });
+                  } catch (error) {
+                    setAiResponse({ title: 'Error', content: 'Failed to get coaching feedback.' });
+                  } finally {
+                    setAiLoading(false);
+                  }
+                }}
+                className="text-xs text-emerald-400 font-bold hover:underline flex items-center gap-1"
+              >
+                <Zap className="w-3 h-3" /> Get AI Coaching
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Habits */}
+              <div className="bg-slate-700/30 rounded-xl p-4 border border-slate-600/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  <span className="text-xs font-bold uppercase text-slate-400">Habits</span>
+                </div>
+                <p className="text-2xl font-black text-emerald-400">{weeklySummary.habits.rate}%</p>
+                <p className="text-[10px] text-slate-500">{weeklySummary.habits.completed}/7 days</p>
+              </div>
+              
+              {/* Meal Prep */}
+              <div className="bg-slate-700/30 rounded-xl p-4 border border-slate-600/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <ChefHat className="w-4 h-4 text-orange-400" />
+                  <span className="text-xs font-bold uppercase text-slate-400">Prep</span>
+                </div>
+                <p className="text-2xl font-black text-orange-400">{weeklySummary.meals.prep_rate}%</p>
+                <p className="text-[10px] text-slate-500">{weeklySummary.meals.prepped}/{weeklySummary.meals.planned} meals</p>
+              </div>
+              
+              {/* Workouts */}
+              <div className="bg-slate-700/30 rounded-xl p-4 border border-slate-600/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <Dumbbell className="w-4 h-4 text-blue-400" />
+                  <span className="text-xs font-bold uppercase text-slate-400">Workouts</span>
+                </div>
+                <p className="text-2xl font-black text-blue-400">{weeklySummary.workouts.completed}</p>
+                <p className="text-[10px] text-slate-500">{weeklySummary.workouts.total_minutes} min total</p>
+              </div>
+              
+              {/* Body Progress */}
+              <div className="bg-slate-700/30 rounded-xl p-4 border border-slate-600/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <Activity className="w-4 h-4 text-purple-400" />
+                  <span className="text-xs font-bold uppercase text-slate-400">Body</span>
+                </div>
+                {weeklySummary.body_progress.weight_change !== null ? (
+                  <>
+                    <p className={`text-2xl font-black ${weeklySummary.body_progress.weight_change <= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {weeklySummary.body_progress.weight_change > 0 ? '+' : ''}{weeklySummary.body_progress.weight_change} lbs
+                    </p>
+                    <p className="text-[10px] text-slate-500">
+                      BF: {weeklySummary.body_progress.bf_change !== null ? `${weeklySummary.body_progress.bf_change > 0 ? '+' : ''}${weeklySummary.body_progress.bf_change}%` : 'N/A'}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xl font-black text-slate-500">--</p>
+                    <p className="text-[10px] text-slate-500">Log metrics to track</p>
+                  </>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Workout Tracker Section */}
+        <section className="bg-slate-800 rounded-2xl border border-slate-700 p-6" data-testid="workout-tracker">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+              <Dumbbell className="w-4 h-4 text-blue-400" />
+              Today's Workout
+            </h2>
+            <button 
+              onClick={() => setActiveModal('workout')}
+              className="bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg text-xs font-bold uppercase flex items-center gap-1 transition"
+              data-testid="log-workout-btn"
+            >
+              <Plus className="w-3 h-3" /> Log Workout
+            </button>
+          </div>
+          
+          {todayWorkout ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-blue-400">{todayWorkout.workout_type}</p>
+                  <p className="text-xs text-slate-400">{todayWorkout.duration_minutes} minutes • {todayWorkout.exercises?.length || 0} exercises</p>
+                </div>
+                <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+              </div>
+              
+              {todayWorkout.exercises?.length > 0 && (
+                <div className="space-y-1">
+                  {todayWorkout.exercises.slice(0, 3).map((ex, idx) => (
+                    <div key={idx} className="flex justify-between items-center p-2 bg-slate-700/30 rounded-lg text-sm">
+                      <span className="font-medium">{ex.exercise}</span>
+                      <span className="text-slate-400 text-xs">{ex.sets}x{ex.reps} @ {ex.weight}lbs</span>
+                    </div>
+                  ))}
+                  {todayWorkout.exercises.length > 3 && (
+                    <p className="text-xs text-slate-500 text-center">+{todayWorkout.exercises.length - 3} more exercises</p>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <Dumbbell className="w-10 h-10 text-slate-600 mx-auto mb-2" />
+              <p className="text-slate-400 text-sm">No workout logged today</p>
+              <p className="text-[10px] text-slate-500">
+                {todayPlan?.training ? `Scheduled: ${todayPlan.training}` : 'Rest day or schedule not set'}
+              </p>
+            </div>
+          )}
+        </section>
       </main>
 
       {/* Bottom Navigation */}
