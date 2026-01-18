@@ -1010,7 +1010,25 @@ function App() {
           {aiLoading ? (
             <div className="animate-pulse text-blue-400 text-center py-10 text-lg font-bold">Generating...</div>
           ) : (
-            <FormattedAIResponse content={aiResponse?.content} />
+            <>
+              {aiResponse?.servings && (
+                <div className={`mb-4 p-3 rounded-xl border ${
+                  aiResponse.servings === 'family' 
+                    ? 'bg-purple-500/10 border-purple-500/30' 
+                    : 'bg-blue-500/10 border-blue-500/30'
+                }`}>
+                  <p className={`text-xs font-bold uppercase ${
+                    aiResponse.servings === 'family' ? 'text-purple-400' : 'text-blue-400'
+                  }`}>
+                    {aiResponse.servings === 'family' 
+                      ? `👨‍👩‍👧‍👦 Family Size (${aiResponse.serving_count} servings)` 
+                      : `🏋️ Individual (${aiResponse.serving_count} serving)`
+                    }
+                  </p>
+                </div>
+              )}
+              <FormattedAIResponse content={aiResponse?.content} />
+            </>
           )}
         </div>
       </Modal>
