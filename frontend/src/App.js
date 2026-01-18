@@ -652,23 +652,24 @@ function App() {
         {/* Prep Alerts Section - Urgent Prep Reminders */}
         {prepAlerts.alerts.length > 0 && (
           <section 
-            className={`rounded-2xl border p-6 shadow-xl ${
-              prepAlerts.has_urgent 
-                ? 'bg-gradient-to-r from-red-900/40 to-orange-900/30 border-red-500/50 animate-pulse' 
-                : 'bg-gradient-to-r from-yellow-900/30 to-orange-900/20 border-yellow-500/30'
-            }`} 
+            className="bg-slate-800 rounded-2xl border border-amber-500/30 p-6 shadow-xl" 
             data-testid="prep-alerts-section"
           >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-bold flex items-center gap-2 uppercase tracking-widest">
-                <AlertTriangle className={`w-4 h-4 ${prepAlerts.has_urgent ? 'text-red-400' : 'text-yellow-400'}`} />
-                <span className={prepAlerts.has_urgent ? 'text-red-400' : 'text-yellow-400'}>
-                  {prepAlerts.has_urgent ? 'PREP NEEDED NOW!' : 'Upcoming Prep'}
+                <Timer className="w-4 h-4 text-amber-400" />
+                <span className="text-amber-400">
+                  {prepAlerts.has_urgent ? 'Prep Reminders' : 'Upcoming Prep'}
                 </span>
+                {prepAlerts.has_urgent && (
+                  <span className="text-[9px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full font-bold">
+                    {prepAlerts.alerts.filter(a => a.urgency === 'NOW').length} today
+                  </span>
+                )}
               </h2>
               <button 
                 onClick={() => setActiveModal('prep-checklist')} 
-                className="text-xs text-yellow-400 font-bold hover:underline"
+                className="text-xs text-amber-400 font-bold hover:underline"
               >
                 View All Prep Tasks
               </button>
@@ -680,16 +681,16 @@ function App() {
                   key={idx}
                   className={`flex items-center justify-between p-4 rounded-xl border ${
                     alert.urgency === 'NOW' 
-                      ? 'bg-red-500/10 border-red-500/40' 
-                      : 'bg-yellow-500/10 border-yellow-500/30'
+                      ? 'bg-amber-500/5 border-amber-500/30' 
+                      : 'bg-slate-700/30 border-slate-600/50'
                   }`}
                 >
                   <div className="flex items-center gap-4">
                     <div className={`p-2 rounded-full ${
-                      alert.urgency === 'NOW' ? 'bg-red-500/20' : 'bg-yellow-500/20'
+                      alert.urgency === 'NOW' ? 'bg-amber-500/10' : 'bg-slate-700'
                     }`}>
-                      <Timer className={`w-5 h-5 ${
-                        alert.urgency === 'NOW' ? 'text-red-400' : 'text-yellow-400'
+                      <ChefHat className={`w-5 h-5 ${
+                        alert.urgency === 'NOW' ? 'text-amber-400' : 'text-slate-400'
                       }`} />
                     </div>
                     <div>
