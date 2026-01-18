@@ -2404,7 +2404,22 @@ function CalorieSettingsModal({ currentTarget, onSave }) {
 // Workout Logger Modal
 function WorkoutModal({ todayWorkout, setTodayWorkout, todayPlan, onClose, reloadData }) {
   const today = new Date().toISOString().split('T')[0];
-  const [workoutType, setWorkoutType] = useState(todayWorkout?.workout_type || todayPlan?.training || 'Custom');
+  
+  // Map training schedule to workout types
+  const mapTrainingToWorkoutType = (training) => {
+    if (!training) return 'Custom';
+    const t = training.toLowerCase();
+    if (t.includes('lower') && t.includes('a')) return 'Lower A (Squat Focus)';
+    if (t.includes('upper') && t.includes('a')) return 'Upper A (Bench Focus)';
+    if (t.includes('lower') && t.includes('b')) return 'Lower B (Deadlift Focus)';
+    if (t.includes('upper') && t.includes('b')) return 'Upper B (OHP Focus)';
+    if (t.includes('full')) return 'Full Body';
+    if (t.includes('cardio') || t.includes('hiit')) return 'Cardio/HIIT';
+    if (t.includes('rest') || t.includes('recovery')) return 'Active Recovery';
+    return training;
+  };
+  
+  const [workoutType, setWorkoutType] = useState(todayWorkout?.workout_type || mapTrainingToWorkoutType(todayPlan?.training) || 'Custom');
   const [duration, setDuration] = useState(todayWorkout?.duration_minutes || 45);
   const [exercises, setExercises] = useState(todayWorkout?.exercises || []);
   const [newExercise, setNewExercise] = useState({ exercise: '', sets: 3, reps: 10, weight: 0 });
