@@ -129,76 +129,13 @@ class MealSelectionRequest(BaseModel):
 
 # ==================== MEAL LIBRARY ====================
 
+# Use extended meal library from meal_data.py
 MEAL_LIBRARY = {
-    "breakfast": [
-        {
-            "id": "b1",
-            "name": "Beast Oats (High-Protein Overnight)",
-            "macros": "450 Cal | 35g P",
-            "blueprint": "1/2 cup Rolled Oats, 1 scoop Whey Protein (Vanilla), 1 tbsp Chia Seeds, 3/4 cup Almond Milk, 1/2 cup Frozen Berries",
-            "category": "breakfast"
-        },
-        {
-            "id": "b2",
-            "name": "Steak & Egg Scramble",
-            "macros": "550 Cal | 45g P",
-            "blueprint": "4oz Lean Sirloin, 2 Eggs, 1/2 cup Egg Whites, Spinach, Bell Peppers",
-            "category": "breakfast"
-        },
-        {
-            "id": "b3",
-            "name": "Greek Yogurt Power Bowl",
-            "macros": "480 Cal | 42g P",
-            "blueprint": "2 cups Non-fat Greek Yogurt, 1/4 cup Granola, 1 tbsp Honey, 1/2 cup Mixed Berries, 1 tbsp Almond Butter",
-            "category": "breakfast"
-        }
-    ],
-    "lunch": [
-        {
-            "id": "l1",
-            "name": "Adult Lunchable (Chicken Edition)",
-            "macros": "550 Cal | 50g P",
-            "blueprint": "8oz Grilled Chicken Breast, 1 bag Steamfresh Veggies, 1/2 Avocado, Light Vinaigrette",
-            "category": "lunch"
-        },
-        {
-            "id": "l2",
-            "name": "Tuna Greek Salad",
-            "macros": "520 Cal | 55g P",
-            "blueprint": "2 cans Tuna (in water), 1/2 cup Greek Yogurt, Celery, Greens, Olives, Cucumber, Feta",
-            "category": "lunch"
-        },
-        {
-            "id": "l3",
-            "name": "Turkey & Hummus Wrap",
-            "macros": "540 Cal | 48g P",
-            "blueprint": "8oz Sliced Turkey Breast, 3 tbsp Hummus, Whole Wheat Wrap, Lettuce, Tomato, Cucumber",
-            "category": "lunch"
-        }
-    ],
-    "dinner": [
-        {
-            "id": "d1",
-            "name": "Modular Turkey Chili (Hidden Veggie)",
-            "macros": "700 Cal | 60g P",
-            "blueprint": "2lbs 99% Lean Ground Turkey, 2 cans Kidney Beans, 1 can Fire Roasted Tomatoes, 1 Onion, 2 Bell Peppers, 1 Zucchini (grated), Chili Seasoning",
-            "category": "dinner"
-        },
-        {
-            "id": "d2",
-            "name": "Slow Cooker Salsa Chicken",
-            "macros": "650 Cal | 58g P",
-            "blueprint": "3lbs Chicken Thighs, 1 jar Salsa, Taco Seasoning, Black Beans. Cook on low 6-8 hours, shred with forks",
-            "category": "dinner"
-        },
-        {
-            "id": "d3",
-            "name": "Sheet Pan Roasted Meat & Veg",
-            "macros": "680 Cal | 56g P",
-            "blueprint": "Chicken Sausage sliced + Broccoli + Sweet Potatoes cubed + Bell Peppers. Toss in olive oil, salt, pepper, garlic powder. Roast 400°F for 25-30 mins",
-            "category": "dinner"
-        }
+    category: [
+        {k: v for k, v in meal.items() if k in ['id', 'name', 'macros', 'blueprint', 'category']}
+        for meal in meals
     ]
+    for category, meals in EXTENDED_MEAL_LIBRARY.items()
 }
 
 # ==================== SUPPLEMENT DEFAULTS ====================
