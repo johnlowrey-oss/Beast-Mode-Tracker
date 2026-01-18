@@ -1898,7 +1898,15 @@ function ShoppingListModal({ items, onToggle, onGenerate }) {
 }
 
 // Prep Checklist Modal
-function PrepChecklistModal({ tasks, onComplete }) {
+function PrepChecklistModal({ tasks, onComplete, extendedLibrary, onGetRecipe }) {
+  // Find meal type by checking all categories
+  const findMealType = (mealId) => {
+    for (const [type, meals] of Object.entries(extendedLibrary || {})) {
+      if (meals.find(m => m.id === mealId)) return type;
+    }
+    return 'dinner'; // default
+  };
+
   return (
     <div className="space-y-6">
       {tasks.length === 0 ? (
@@ -1942,14 +1950,24 @@ function PrepChecklistModal({ tasks, onComplete }) {
                       </p>
                     </div>
                   </div>
-                  {!task.completed && (
-                    <button
-                      onClick={() => onComplete(task.meal_id, task.serves_dates)}
-                      className="bg-emerald-600 px-4 py-2 rounded-lg text-xs font-bold uppercase hover:bg-emerald-700 transition"
-                    >
-                      Mark Done
-                    </button>
-                  )}
+                  <div className="flex flex-col gap-2">
+                    {!task.completed && (
+                      <>
+                        <button
+                          onClick={() => onGetRecipe(task.meal_id, findMealType(task.meal_id))}
+                          className="bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition flex items-center gap-1"
+                        >
+                          <ChefHat className="w-3 h-3" /> Recipe
+                        </button>
+                        <button
+                          onClick={() => onComplete(task.meal_id, task.serves_dates)}
+                          className="bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition"
+                        >
+                          Mark Done
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
                 {task.completed && (
                   <div className="text-[10px] text-emerald-400 font-bold uppercase">
