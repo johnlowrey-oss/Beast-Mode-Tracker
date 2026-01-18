@@ -87,6 +87,11 @@ function App() {
   const [inventory, setInventory] = useState([]);
   const [prepAlerts, setPrepAlerts] = useState({ alerts: [], has_urgent: false });
   
+  // Weekly Summary & Workout State
+  const [weeklySummary, setWeeklySummary] = useState(null);
+  const [workouts, setWorkouts] = useState([]);
+  const [todayWorkout, setTodayWorkout] = useState(null);
+  
   // UI State
   const [activeModal, setActiveModal] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
