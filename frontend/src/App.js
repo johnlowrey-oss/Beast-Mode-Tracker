@@ -672,6 +672,137 @@ function MEDRoutine() {
   );
 }
 
+// Formatted AI Response Component
+function FormattedAIResponse({ content }) {
+  if (!content) return null;
+
+  // Split content by lines and format
+  const formatContent = (text) => {
+    const lines = text.split('\n');
+    const elements = [];
+    let currentSection = [];
+    let listItems = [];
+    let inList = false;
+
+    lines.forEach((line, idx) => {
+      const trimmed = line.trim();
+      
+      // Skip empty lines but add spacing
+      if (!trimmed) {
+        if (currentSection.length > 0) {
+          elements.push(<p key={`p-${idx}`} className="mb-4 text-slate-300 leading-relaxed">{currentSection.join(' ')}</p>);
+          currentSection = [];
+        }
+        if (inList && listItems.length > 0) {
+          elements.push(
+            <ul key={`ul-${idx}`} className="mb-4 space-y-2 list-disc list-inside text-slate-300">
+              {listItems.map((item, i) => <li key={i} className="ml-2">{item}</li>)}
+            </ul>
+          );
+          listItems = [];
+          inList = false;
+        }
+        return;
+      }
+
+      // Main headers (### or **TITLE**)
+      if (trimmed.startsWith('###') || (trimmed.startsWith('**') && trimmed.endsWith('**') && trimmed.length < 60)) {
+        if (currentSection.length > 0) {
+          elements.push(<p key={`p-${idx}`} className="mb-4 text-slate-300 leading-relaxed">{currentSection.join(' ')}</p>);
+          currentSection = [];
+        }
+        const headerText = trimmed.replace(/^###\s*/, '').replace(/^\*\*/, '').replace(/\*\*$/, '');
+        elements.push(
+          <h3 key={`h3-${idx}`} className="text-lg font-black text-blue-400 uppercase tracking-wide mt-6 mb-3 border-b border-blue-500/30 pb-2">
+            {headerText}
+          </h3>
+        );
+        return;
+      }
+
+      // Subheaders (numbered like "1. **Ingredients**")
+      if (/^\d+\.\s*\*\*/.test(trimmed)) {
+        if (currentSection.length > 0) {
+          elements.push(<p key={`p-${idx}`} className="mb-4 text-slate-300 leading-relaxed">{currentSection.join(' ')}</p>);
+          currentSection = [];
+        }
+        const subHeaderText = trimmed.replace(/^\d+\.\s*\*\*/, '').replace(/\*\*.*$/, '');
+        elements.push(
+          <h4 key={`h4-${idx}`} className="text-base font-bold text-emerald-400 uppercase tracking-wider mt-5 mb-2 flex items-center gap-2">
+            <span className="w-1 h-4 bg-emerald-400 rounded"></span>
+            {subHeaderText}
+          </h4>
+        );
+        return;
+      }
+
+      // List items (starts with - or • or number.)
+      if (/^[-•]\s/.test(trimmed) || /^\d+\.\s/.test(trimmed)) {
+        if (currentSection.length > 0) {
+          elements.push(<p key={`p-${idx}`} className="mb-4 text-slate-300 leading-relaxed">{currentSection.join(' ')}</p>);
+          currentSection = [];
+        }
+        inList = true;
+        const itemText = trimmed.replace(/^[-•]\s/, '').replace(/^\d+\.\s/, '');
+        listItems.push(itemText);
+        return;
+      }
+
+      // Bold text inline
+      if (trimmed.includes('**')) {
+        if (currentSection.length > 0) {
+          elements.push(<p key={`p-${idx}`} className="mb-4 text-slate-300 leading-relaxed">{currentSection.join(' ')}</p>);
+          currentSection = [];
+        }
+        const parts = trimmed.split(/(\*\*[^*]+\*\*)/g);
+        elements.push(
+          <p key={`p-${idx}`} className="mb-3 text-slate-300 leading-relaxed">
+            {parts.map((part, i) => {
+              if (part.startsWith('**') && part.endsWith('**')) {
+                return <strong key={i} className="text-white font-bold">{part.slice(2, -2)}</strong>;
+              }
+              return part;
+            })}
+          </p>
+        );
+        return;
+      }
+
+      // Regular text
+      if (inList && listItems.length > 0) {
+        elements.push(
+          <ul key={`ul-${idx}`} className="mb-4 space-y-2 list-disc list-inside text-slate-300">
+            {listItems.map((item, i) => <li key={i} className="ml-2">{item}</li>)}
+          </ul>
+        );
+        listItems = [];
+        inList = false;
+      }
+      currentSection.push(trimmed);
+    });
+
+    // Add remaining content
+    if (currentSection.length > 0) {
+      elements.push(<p key="final-p" className="mb-4 text-slate-300 leading-relaxed">{currentSection.join(' ')}</p>);
+    }
+    if (listItems.length > 0) {
+      elements.push(
+        <ul key="final-ul" className="mb-4 space-y-2 list-disc list-inside text-slate-300">
+          {listItems.map((item, i) => <li key={i} className="ml-2">{item}</li>)}
+        </ul>
+      );
+    }
+
+    return elements;
+  };
+
+  return (
+    <div className="text-left space-y-2 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
+      {formatContent(content)}
+    </div>
+  );
+}
+
 // Meal Selector Component
 function MealSelector({ category, library, settings, onSelect }) {
   const meals = library[category] || [];
