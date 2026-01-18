@@ -147,21 +147,36 @@ class TestShoppingListToggleBugFix:
         save_shop_response = api_client.post(f"{BASE_URL}/api/shopping-list/save", json=shopping_list)
         assert save_shop_response.status_code == 200
         
-        # Get current inventory before toggle
-        inv_before = api_client.get(f"{BASE_URL}/api/inventory").json()["inventory"]
+        # Find an item that is NOT purchased and NOT in inventory
+        test_idx = None
+        for idx, item in enumerate(shopping_list):
+            if not item.get("purchased", False):
+                # Check if item is in inventory
+                inv = api_client.get(f"{BASE_URL}/api/inventory").json()["inventory"]
+                if not any(i["item"] == item["item"] for i in inv):
+                    test_idx = idx
+                    break
         
-        # Toggle first item to purchased (check it)
-        toggle_response = api_client.post(f"{BASE_URL}/api/shopping-list/toggle-purchased?item_index=0")
+        if test_idx is None:
+            pytest.skip("No suitable unpurchased item found")
+        
+        item_name = shopping_list[test_idx]["item"]
+        
+        # Get inventory count before toggle
+        inv_before = api_client.get(f"{BASE_URL}/api/inventory").json()["inventory"]
+        count_before = len([i for i in inv_before if i["item"] == item_name])
+        
+        # Toggle item to purchased (check it)
+        toggle_response = api_client.post(f"{BASE_URL}/api/shopping-list/toggle-purchased?item_index={test_idx}")
         assert toggle_response.status_code == 200
         
         # Get inventory after toggle
         inv_after = api_client.get(f"{BASE_URL}/api/inventory").json()["inventory"]
+        count_after = len([i for i in inv_after if i["item"] == item_name])
         
-        # The item should now be in inventory
-        first_item_name = shopping_list[0]["item"]
-        item_in_inventory = next((item for item in inv_after if item["item"] == first_item_name), None)
-        assert item_in_inventory is not None, f"Item '{first_item_name}' should be added to inventory when checked"
-        print(f"✓ Checking shopping item '{first_item_name}' correctly adds to inventory")
+        # The item count should increase by 1
+        assert count_after == count_before + 1, f"Item '{item_name}' count should increase by 1 when checked"
+        print(f"✓ Checking shopping item '{item_name}' correctly adds to inventory (count: {count_before} -> {count_after})")
     
     def test_toggle_unpurchased_removes_from_inventory(self, api_client):
         """Test BUG FIX: Unchecking a shopping list item removes it from inventory"""
@@ -172,7 +187,7 @@ class TestShoppingListToggleBugFix:
         if len(shopping_list) == 0:
             pytest.skip("No shopping list items available")
         
-        # Find a purchased item or make one purchased
+        # Find a purchased item
         purchased_idx = None
         for idx, item in enumerate(shopping_list):
             if item.get("purchased", False):
@@ -188,28 +203,20 @@ class TestShoppingListToggleBugFix:
         
         item_name = shopping_list[purchased_idx]["item"]
         
-        # Verify item is in inventory before unchecking
+        # Get inventory count before unchecking
         inv_before = api_client.get(f"{BASE_URL}/api/inventory").json()["inventory"]
-        item_before = next((item for item in inv_before if item["item"] == item_name), None)
-        
-        if item_before is None:
-            # Item might not be in inventory, add it first
-            api_client.post(f"{BASE_URL}/api/inventory/add", json={
-                "item": item_name,
-                "amount": shopping_list[purchased_idx]["amount"],
-                "category": shopping_list[purchased_idx]["category"]
-            })
+        count_before = len([i for i in inv_before if i["item"] == item_name])
         
         # Now toggle to unpurchased (uncheck)
         toggle_response = api_client.post(f"{BASE_URL}/api/shopping-list/toggle-purchased?item_index={purchased_idx}")
         assert toggle_response.status_code == 200
         
-        # Verify item is REMOVED from inventory (BUG FIX)
+        # Verify item count DECREASED by 1 (BUG FIX)
         inv_after = api_client.get(f"{BASE_URL}/api/inventory").json()["inventory"]
-        item_after = next((item for item in inv_after if item["item"] == item_name), None)
+        count_after = len([i for i in inv_after if i["item"] == item_name])
         
-        assert item_after is None, f"BUG: Item '{item_name}' should be REMOVED from inventory when unchecked, but it's still there"
-        print(f"✓ BUG FIX VERIFIED: Unchecking shopping item '{item_name}' correctly removes from inventory")
+        assert count_after == count_before - 1, f"BUG: Item '{item_name}' count should decrease by 1 when unchecked (was {count_before}, now {count_after})"
+        print(f"✓ BUG FIX VERIFIED: Unchecking shopping item '{item_name}' correctly removes from inventory (count: {count_before} -> {count_after})")
 
 
 class TestMarkPrepDeductsIngredients:
