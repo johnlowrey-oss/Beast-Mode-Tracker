@@ -167,9 +167,12 @@ function App() {
   const loadAllData = async () => {
     try {
       setLoading(true);
+      const today = new Date().toISOString().split('T')[0];
+      
       const [
         habitsRes, metricsRes, settingsRes, suppsRes, scheduleRes, todayRes, 
-        plannerRes, mealsRes, extendedMealsRes, mealPlanRes, shoppingRes, prepRes, inventoryRes, prepAlertsRes
+        plannerRes, mealsRes, extendedMealsRes, mealPlanRes, shoppingRes, prepRes, 
+        inventoryRes, prepAlertsRes, summaryRes, workoutsRes, todayWorkoutRes
       ] = await Promise.all([
         axios.get(`${API}/habits`),
         axios.get(`${API}/metrics`),
@@ -184,7 +187,10 @@ function App() {
         axios.get(`${API}/shopping-list`),
         axios.get(`${API}/meal-plan/prep-tasks`),
         axios.get(`${API}/inventory`),
-        axios.get(`${API}/meal-plan/prep-alerts`)
+        axios.get(`${API}/meal-plan/prep-alerts`),
+        axios.get(`${API}/summary/weekly`),
+        axios.get(`${API}/workouts?limit=10`),
+        axios.get(`${API}/workouts/${today}`)
       ]);
 
       setHabits(habitsRes.data.habits || {});
@@ -202,6 +208,9 @@ function App() {
       setPrepTasks(prepRes.data.prep_tasks || []);
       setInventory(inventoryRes.data.inventory || []);
       setPrepAlerts(prepAlertsRes.data || { alerts: [], has_urgent: false });
+      setWeeklySummary(summaryRes.data);
+      setWorkouts(workoutsRes.data.workouts || []);
+      setTodayWorkout(todayWorkoutRes.data.workout);
       
       setLoading(false);
     } catch (error) {
