@@ -190,10 +190,8 @@ function App() {
       const generatedPlan = res.data.meal_plan;
       const weeks = res.data.weeks;
       
-      // Save the generated plan to database
-      await axios.post(`${API}/meal-plan/save`, generatedPlan, {
-        params: { weeks: weeks }
-      });
+      // Save the generated plan to database (send as array with weeks as query param)
+      await axios.post(`${API}/meal-plan/save?weeks=${weeks}`, generatedPlan);
       
       setMealPlan(generatedPlan);
       setPlanWeeks(weeks);
