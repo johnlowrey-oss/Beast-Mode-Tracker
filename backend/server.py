@@ -82,6 +82,51 @@ class RecipeRequest(BaseModel):
     meal_blueprint: str
     category: str
 
+# ==================== NEW MEAL PLANNING MODELS ====================
+
+class MealPlanEntry(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    date: str  # YYYY-MM-DD
+    meal_type: str  # breakfast, lunch, dinner
+    meal_id: str
+    meal_name: str
+    is_prepped: bool = False
+    prep_date: Optional[str] = None
+
+class ShoppingListItem(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    item: str
+    amount: str
+    category: str
+    purchased: bool = False
+    meal_ids: List[str] = []
+
+class InventoryItem(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    item: str
+    amount: str
+    category: str
+    purchased_date: str
+    expiry_date: Optional[str] = None
+
+class PrepTask(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    meal_id: str
+    meal_name: str
+    batch_size: int
+    prep_day: str
+    completed: bool = False
+    serves_dates: List[str] = []
+
+class PlanWeeksRequest(BaseModel):
+    weeks: int  # 1-4 weeks
+    start_date: Optional[str] = None
+
+class MealSelectionRequest(BaseModel):
+    date: str
+    meal_type: str
+    meal_id: str
+
 # ==================== MEAL LIBRARY ====================
 
 MEAL_LIBRARY = {
