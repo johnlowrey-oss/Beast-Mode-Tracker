@@ -726,7 +726,7 @@ function App() {
             <button 
               onClick={async () => {
                 const today = new Date().toISOString().split('T')[0];
-                await axios.post(`${API}/habits/${today}`, { completed: !habits[today] });
+                await axios.post(`${API}/habits/toggle`, { date: today, completed: !habits[today] });
                 setHabits(prev => ({ ...prev, [today]: !prev[today] }));
               }}
               className={`col-span-1 p-4 rounded-xl border-2 transition-all ${
