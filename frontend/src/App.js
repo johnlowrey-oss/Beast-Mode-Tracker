@@ -855,17 +855,29 @@ function MealPlannerModal({ mealPlan, extendedLibrary, selectedWeeks, setSelecte
     if (!swapTarget) return;
     
     try {
-      await axios.post(`${BACKEND_URL}/api/meal-plan/update-meal`, {
+      console.log('Swapping meal:', swapTarget.date, swapTarget.mealType, 'from', swapTarget.currentMealId, 'to', newMealId);
+      
+      const response = await axios.post(`${BACKEND_URL}/api/meal-plan/update-meal`, {
         date: swapTarget.date,
         meal_type: swapTarget.mealType,
         meal_id: newMealId
       });
       
-      // Reload data
-      window.location.reload();
+      console.log('Swap response:', response.data);
+      
+      // Reload all data instead of full page reload
+      await loadAllData();
+      
+      // Close modal after successful swap
+      setSwapModalOpen(false);
+      setSwapTarget(null);
+      
+      // Show success feedback
+      alert('✅ Meal swapped successfully!');
+      
     } catch (error) {
       console.error("Error swapping meal:", error);
-      alert("Failed to swap meal. Please try again.");
+      alert(`❌ Failed to swap meal: ${error.response?.data?.detail || error.message}`);
     }
   };
 
