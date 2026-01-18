@@ -1528,6 +1528,20 @@ function MealPlannerModal({ mealPlan, setMealPlan, extendedLibrary, selectedWeek
 // Shopping List Modal
 function ShoppingListModal({ items, onToggle, onGenerate }) {
   const categories = [...new Set(items.map(item => item.category))];
+  
+  const copyToClipboard = () => {
+    const listText = categories.map(cat => {
+      const catItems = items.filter(i => i.category === cat && !i.purchased);
+      if (catItems.length === 0) return '';
+      return `📦 ${cat}\n${catItems.map(i => `  • ${i.item} (${i.amount})`).join('\n')}`;
+    }).filter(Boolean).join('\n\n');
+    
+    const header = `🛒 Beast Hub Shopping List\n${new Date().toLocaleDateString()}\n${'─'.repeat(25)}\n\n`;
+    const footer = `\n\n✅ ${items.filter(i => i.purchased).length}/${items.length} items purchased`;
+    
+    navigator.clipboard.writeText(header + listText + footer);
+    alert('Shopping list copied to clipboard!');
+  };
 
   return (
     <div className="space-y-6">
@@ -1547,9 +1561,18 @@ function ShoppingListModal({ items, onToggle, onGenerate }) {
             <div>
               <p className="text-sm text-slate-400">{items.filter(i => i.purchased).length} / {items.length} purchased</p>
             </div>
-            <button onClick={onGenerate} className="text-xs text-blue-400 font-bold hover:underline">
-              Regenerate
-            </button>
+            <div className="flex gap-2">
+              <button 
+                onClick={copyToClipboard}
+                className="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg font-bold text-emerald-400 transition flex items-center gap-1"
+                data-testid="copy-list-btn"
+              >
+                <ClipboardList className="w-3 h-3" /> Copy List
+              </button>
+              <button onClick={onGenerate} className="text-xs text-blue-400 font-bold hover:underline">
+                Regenerate
+              </button>
+            </div>
           </div>
 
           {categories.map((category) => {
