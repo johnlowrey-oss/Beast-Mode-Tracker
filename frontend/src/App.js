@@ -442,8 +442,8 @@ function App() {
   const bfProgress = Math.max(0, Math.min(100, ((25 - latestMetric.body_fat) / (25 - 12)) * 100));
 
   // AI Functions
-  const generateRecipe = async (category, servings = 'individual', mealId = null) => {
-    const meal = settings.selected_meals[category];
+  const generateRecipe = async (category, servings = 'individual', mealId = null, mealDataOverride = null) => {
+    const meal = mealDataOverride || settings.selected_meals[category];
     if (!meal) return;
 
     setAiLoading(true);
