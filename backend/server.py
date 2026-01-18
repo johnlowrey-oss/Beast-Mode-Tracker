@@ -637,6 +637,322 @@ Keep it practical for a working father with 2 kids under 2."""
     response = await get_ai_response(prompt, system_message)
     return {"suggestions": response}
 
+# ========== MEAL PLANNING SYSTEM ==========
+
+@api_router.get("/meals/library/extended")
+async def get_extended_meal_library():
+    """Get complete meal library with all metadata"""
+    return EXTENDED_MEAL_LIBRARY
+
+@api_router.post("/meal-plan/generate")
+async def generate_meal_plan(req: PlanWeeksRequest):
+    """Generate AI-suggested meal plan for 1-4 weeks"""
+    weeks = max(1, min(4, req.weeks))
+    start_date = datetime.fromisoformat(req.start_date) if req.start_date else datetime.now()
+    start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    total_days = weeks * 7
+    meal_plan = []
+    
+    # Simple rotation strategy (can be enhanced with AI later)
+    all_breakfasts = EXTENDED_MEAL_LIBRARY["breakfast"]
+    all_lunches = EXTENDED_MEAL_LIBRARY["lunch"]
+    all_dinners = EXTENDED_MEAL_LIBRARY["dinner"]
+    
+    for day_offset in range(total_days):
+        current_date = start_date + timedelta(days=day_offset)
+        date_str = current_date.strftime("%Y-%m-%d")
+        
+        # Rotate through meals
+        breakfast = all_breakfasts[day_offset % len(all_breakfasts)]
+        lunch = all_lunches[day_offset % len(all_lunches)]
+        dinner = all_dinners[day_offset % len(all_dinners)]
+        
+        meal_plan.extend([
+            {"date": date_str, "meal_type": "breakfast", "meal_id": breakfast["id"], "meal_name": breakfast["name"], "is_prepped": False},
+            {"date": date_str, "meal_type": "lunch", "meal_id": lunch["id"], "meal_name": lunch["name"], "is_prepped": False},
+            {"date": date_str, "meal_type": "dinner", "meal_id": dinner["id"], "meal_name": dinner["name"], "is_prepped": False}
+        ])
+    
+    return {"meal_plan": meal_plan, "weeks": weeks, "start_date": start_date.strftime("%Y-%m-%d")}
+
+@api_router.get("/meal-plan")
+async def get_meal_plan():
+    """Get saved meal plan"""
+    plan_doc = await db.meal_plan.find_one({"_id": "user_meal_plan"})
+    if not plan_doc:
+        return {"meal_plan": [], "weeks": 0}
+    return {"meal_plan": plan_doc.get("meals", []), "weeks": plan_doc.get("weeks", 0)}
+
+@api_router.post("/meal-plan/save")
+async def save_meal_plan(meal_plan: List[MealPlanEntry], weeks: int):
+    """Save meal plan"""
+    await db.meal_plan.update_one(
+        {"_id": "user_meal_plan"},
+        {"$set": {"meals": [m.model_dump() for m in meal_plan], "weeks": weeks}},
+        upsert=True
+    )
+    return {"success": True}
+
+@api_router.post("/meal-plan/update-meal")
+async def update_meal_in_plan(req: MealSelectionRequest):
+    """Update a specific meal in the plan"""
+    plan_doc = await db.meal_plan.find_one({"_id": "user_meal_plan"})
+    if not plan_doc:
+        raise HTTPException(status_code=404, detail="No meal plan found")
+    
+    meals = plan_doc.get("meals", [])
+    
+    # Find and update the meal
+    updated = False
+    for meal in meals:
+        if meal["date"] == req.date and meal["meal_type"] == req.meal_type:
+            # Find meal details from extended library
+            meal_data = None
+            for category_meals in EXTENDED_MEAL_LIBRARY.values():
+                for m in category_meals:
+                    if m["id"] == req.meal_id:
+                        meal_data = m
+                        break
+            
+            if meal_data:
+                meal["meal_id"] = req.meal_id
+                meal["meal_name"] = meal_data["name"]
+                meal["is_prepped"] = False
+                updated = True
+                break
+    
+    if updated:
+        await db.meal_plan.update_one(
+            {"_id": "user_meal_plan"},
+            {"$set": {"meals": meals}}
+        )
+        return {"success": True}
+    else:
+        raise HTTPException(status_code=404, detail="Meal not found in plan")
+
+@api_router.get("/meal-plan/prep-tasks")
+async def get_prep_tasks():
+    """Get all meals that need batch prep"""
+    plan_doc = await db.meal_plan.find_one({"_id": "user_meal_plan"})
+    if not plan_doc:
+        return {"prep_tasks": []}
+    
+    meals = plan_doc.get("meals", [])
+    prep_tasks = {}
+    
+    # Group meals by ID that need prep
+    for meal_entry in meals:
+        meal_id = meal_entry["meal_id"]
+        
+        # Find meal in extended library
+        meal_data = None
+        for category_meals in EXTENDED_MEAL_LIBRARY.values():
+            for m in category_meals:
+                if m["id"] == meal_id:
+                    meal_data = m
+                    break
+        
+        if meal_data and meal_data.get("batch_prep_friendly"):
+            if meal_id not in prep_tasks:
+                prep_tasks[meal_id] = {
+                    "meal_id": meal_id,
+                    "meal_name": meal_data["name"],
+                    "batch_size": meal_data.get("batch_size", 1),
+                    "prep_day": meal_data.get("prep_day_recommended", "Sunday"),
+                    "prep_time_minutes": meal_data.get("prep_time_minutes", 0),
+                    "shelf_life_days": meal_data.get("shelf_life_days", 3),
+                    "serves_dates": [],
+                    "completed": meal_entry.get("is_prepped", False)
+                }
+            prep_tasks[meal_id]["serves_dates"].append(meal_entry["date"])
+    
+    return {"prep_tasks": list(prep_tasks.values())}
+
+@api_router.post("/meal-plan/mark-prepped")
+async def mark_meal_prepped(meal_id: str, dates: List[str]):
+    """Mark a batch-prepped meal as ready for specific dates"""
+    plan_doc = await db.meal_plan.find_one({"_id": "user_meal_plan"})
+    if not plan_doc:
+        raise HTTPException(status_code=404, detail="No meal plan found")
+    
+    meals = plan_doc.get("meals", [])
+    prep_date = datetime.now().strftime("%Y-%m-%d")
+    
+    # Update all matching meals
+    for meal in meals:
+        if meal["meal_id"] == meal_id and meal["date"] in dates:
+            meal["is_prepped"] = True
+            meal["prep_date"] = prep_date
+    
+    await db.meal_plan.update_one(
+        {"_id": "user_meal_plan"},
+        {"$set": {"meals": meals}}
+    )
+    
+    return {"success": True}
+
+@api_router.get("/shopping-list/generate")
+async def generate_shopping_list():
+    """Generate shopping list from meal plan"""
+    plan_doc = await db.meal_plan.find_one({"_id": "user_meal_plan"})
+    if not plan_doc:
+        return {"shopping_list": []}
+    
+    meals = plan_doc.get("meals", [])
+    
+    # Aggregate ingredients
+    ingredient_totals = defaultdict(lambda: {"amount": [], "category": "", "meal_ids": set()})
+    
+    for meal_entry in meals:
+        # Find meal in extended library
+        meal_data = None
+        for category_meals in EXTENDED_MEAL_LIBRARY.values():
+            for m in category_meals:
+                if m["id"] == meal_entry["meal_id"]:
+                    meal_data = m
+                    break
+        
+        if meal_data:
+            for ingredient in meal_data.get("ingredients", []):
+                item_name = ingredient["item"]
+                ingredient_totals[item_name]["amount"].append(ingredient["amount"])
+                ingredient_totals[item_name]["category"] = ingredient["category"]
+                ingredient_totals[item_name]["meal_ids"].add(meal_entry["meal_id"])
+    
+    # Convert to list format
+    shopping_list = []
+    for item, data in ingredient_totals.items():
+        shopping_list.append({
+            "item": item,
+            "amount": ", ".join(set(data["amount"])),  # Combine amounts
+            "category": data["category"],
+            "purchased": False,
+            "meal_ids": list(data["meal_ids"])
+        })
+    
+    # Sort by category
+    category_order = {cat: i for i, cat in enumerate(SHOPPING_CATEGORIES)}
+    shopping_list.sort(key=lambda x: category_order.get(x["category"], 99))
+    
+    return {"shopping_list": shopping_list}
+
+@api_router.post("/shopping-list/save")
+async def save_shopping_list(items: List[ShoppingListItem]):
+    """Save shopping list"""
+    await db.shopping_list.update_one(
+        {"_id": "user_shopping_list"},
+        {"$set": {"items": [item.model_dump() for item in items]}},
+        upsert=True
+    )
+    return {"success": True}
+
+@api_router.get("/shopping-list")
+async def get_shopping_list():
+    """Get saved shopping list"""
+    list_doc = await db.shopping_list.find_one({"_id": "user_shopping_list"})
+    if not list_doc:
+        return {"items": []}
+    return {"items": list_doc.get("items", [])}
+
+@api_router.post("/shopping-list/toggle-purchased")
+async def toggle_purchased(item_index: int):
+    """Toggle purchased status of shopping list item"""
+    list_doc = await db.shopping_list.find_one({"_id": "user_shopping_list"})
+    if not list_doc:
+        raise HTTPException(status_code=404, detail="Shopping list not found")
+    
+    items = list_doc.get("items", [])
+    if 0 <= item_index < len(items):
+        items[item_index]["purchased"] = not items[item_index].get("purchased", False)
+        
+        # If purchased, add to inventory
+        if items[item_index]["purchased"]:
+            inventory_item = {
+                "item": items[item_index]["item"],
+                "amount": items[item_index]["amount"],
+                "category": items[item_index]["category"],
+                "purchased_date": datetime.now().strftime("%Y-%m-%d"),
+                "expiry_date": None
+            }
+            await db.inventory.insert_one(inventory_item)
+    
+    await db.shopping_list.update_one(
+        {"_id": "user_shopping_list"},
+        {"$set": {"items": items}}
+    )
+    
+    return {"success": True, "items": items}
+
+@api_router.get("/inventory")
+async def get_inventory():
+    """Get current food inventory"""
+    inventory = await db.inventory.find({}, {"_id": 0}).to_list(1000)
+    return {"inventory": inventory}
+
+@api_router.get("/meal-plan/suggestions-today")
+async def get_today_suggestions():
+    """Get smart meal suggestions for today based on what's prepped and available"""
+    today = datetime.now().strftime("%Y-%m-%d")
+    
+    # Get today's planned meals
+    plan_doc = await db.meal_plan.find_one({"_id": "user_meal_plan"})
+    today_meals = {"breakfast": None, "lunch": None, "dinner": None}
+    
+    if plan_doc:
+        meals = plan_doc.get("meals", [])
+        for meal in meals:
+            if meal["date"] == today:
+                today_meals[meal["meal_type"]] = meal
+    
+    # Get inventory
+    inventory = await db.inventory.find({}, {"_id": 0}).to_list(1000)
+    available_items = {item["item"] for item in inventory}
+    
+    # Build suggestions
+    suggestions = {
+        "breakfast": {"planned": today_meals["breakfast"], "alternatives": [], "status": "not_prepped"},
+        "lunch": {"planned": today_meals["lunch"], "alternatives": [], "status": "not_prepped"},
+        "dinner": {"planned": today_meals["dinner"], "alternatives": [], "status": "not_prepped"}
+    }
+    
+    for meal_type in ["breakfast", "lunch", "dinner"]:
+        planned = today_meals[meal_type]
+        
+        if planned:
+            # Check if prepped
+            if planned.get("is_prepped"):
+                suggestions[meal_type]["status"] = "ready_to_eat"
+            else:
+                # Find meal data
+                meal_data = None
+                for category_meals in EXTENDED_MEAL_LIBRARY.values():
+                    for m in category_meals:
+                        if m["id"] == planned["meal_id"]:
+                            meal_data = m
+                            break
+                
+                if meal_data:
+                    # Check if can make from inventory
+                    meal_ingredients = {ing["item"] for ing in meal_data.get("ingredients", [])}
+                    if meal_ingredients.issubset(available_items):
+                        suggestions[meal_type]["status"] = "can_make_now"
+                    else:
+                        suggestions[meal_type]["status"] = "need_ingredients"
+            
+            # Find alternatives that can be made
+            for category_meals in EXTENDED_MEAL_LIBRARY[meal_type]:
+                if category_meals["id"] != planned["meal_id"]:
+                    meal_ingredients = {ing["item"] for ing in category_meals.get("ingredients", [])}
+                    if meal_ingredients.issubset(available_items):
+                        suggestions[meal_type]["alternatives"].append({
+                            "id": category_meals["id"],
+                            "name": category_meals["name"],
+                            "macros": category_meals["macros"]
+                        })
+    
+    return suggestions
+
 # Include the router in the main app
 app.include_router(api_router)
 
