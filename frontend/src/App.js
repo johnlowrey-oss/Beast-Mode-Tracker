@@ -1386,6 +1386,7 @@ function App() {
           setSelectedWeeks={setSelectedWeeks}
           onGenerate={generateMealPlan}
           aiLoading={aiLoading}
+          onGoToShopping={() => setActiveModal('shopping-list')}
         />
       </Modal>
 
