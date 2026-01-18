@@ -204,9 +204,11 @@ function App() {
       setShoppingList(shopRes.data.shopping_list);
       await axios.post(`${API}/shopping-list/save`, shopRes.data.shopping_list);
       
-      // Get prep tasks
+      // Get prep tasks and alerts
       const prepRes = await axios.get(`${API}/meal-plan/prep-tasks`);
       setPrepTasks(prepRes.data.prep_tasks);
+      const alertsRes = await axios.get(`${API}/meal-plan/prep-alerts`);
+      setPrepAlerts(alertsRes.data || { alerts: [], has_urgent: false });
       
       setAiLoading(false);
       alert(`✅ Generated ${selectedWeeks}-week meal plan with shopping list!`);
