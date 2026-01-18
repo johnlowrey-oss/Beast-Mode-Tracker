@@ -857,6 +857,94 @@ async def get_prep_tasks():
     
     return {"prep_tasks": list(prep_tasks.values())}
 
+@api_router.get("/meal-plan/prep-alerts")
+async def get_prep_alerts():
+    """Get urgent prep alerts - what needs to be prepped today or tomorrow"""
+    today = datetime.now()
+    today_str = today.strftime("%Y-%m-%d")
+    tomorrow = today + timedelta(days=1)
+    tomorrow_str = tomorrow.strftime("%Y-%m-%d")
+    day_after = today + timedelta(days=2)
+    day_after_str = day_after.strftime("%Y-%m-%d")
+    
+    plan_doc = await db.meal_plan.find_one({"_id": "user_meal_plan"})
+    if not plan_doc:
+        return {"alerts": [], "has_urgent": False}
+    
+    meals = plan_doc.get("meals", [])
+    alerts = []
+    
+    # Find meals in the next 2 days that need advance prep and aren't prepped yet
+    for meal_entry in meals:
+        meal_date = meal_entry["date"]
+        if meal_date not in [today_str, tomorrow_str, day_after_str]:
+            continue
+        if meal_entry.get("is_prepped", False):
+            continue
+            
+        # Find meal data
+        meal_data = None
+        for category_meals in EXTENDED_MEAL_LIBRARY.values():
+            for m in category_meals:
+                if m["id"] == meal_entry["meal_id"]:
+                    meal_data = m
+                    break
+            if meal_data:
+                break
+        
+        if not meal_data:
+            continue
+            
+        # Check if needs advance prep
+        if meal_data.get("requires_advance_prep") or meal_data.get("batch_prep_friendly"):
+            advance_days = meal_data.get("advance_prep_days", 0)
+            prep_time = meal_data.get("prep_time_minutes", 0)
+            
+            # Calculate when prep should happen
+            meal_datetime = datetime.strptime(meal_date, "%Y-%m-%d")
+            prep_by_date = meal_datetime - timedelta(days=advance_days)
+            prep_by_str = prep_by_date.strftime("%Y-%m-%d")
+            
+            # Determine urgency
+            if prep_by_str <= today_str:
+                urgency = "NOW"
+            elif prep_by_str == tomorrow_str:
+                urgency = "TOMORROW"
+            else:
+                urgency = "UPCOMING"
+            
+            # Only include urgent alerts (NOW or TOMORROW)
+            if urgency in ["NOW", "TOMORROW"]:
+                alerts.append({
+                    "meal_id": meal_entry["meal_id"],
+                    "meal_name": meal_entry["meal_name"],
+                    "meal_type": meal_entry["meal_type"],
+                    "meal_date": meal_date,
+                    "prep_by": prep_by_str,
+                    "urgency": urgency,
+                    "prep_time_minutes": prep_time,
+                    "advance_prep_days": advance_days,
+                    "batch_prep_friendly": meal_data.get("batch_prep_friendly", False),
+                    "batch_size": meal_data.get("batch_size", 1)
+                })
+    
+    # Sort by urgency (NOW first) then by meal date
+    urgency_order = {"NOW": 0, "TOMORROW": 1, "UPCOMING": 2}
+    alerts.sort(key=lambda x: (urgency_order.get(x["urgency"], 3), x["meal_date"]))
+    
+    # Dedupe by meal_id (show each meal only once even if scheduled multiple days)
+    seen_meals = set()
+    unique_alerts = []
+    for alert in alerts:
+        if alert["meal_id"] not in seen_meals:
+            seen_meals.add(alert["meal_id"])
+            unique_alerts.append(alert)
+    
+    return {
+        "alerts": unique_alerts,
+        "has_urgent": any(a["urgency"] == "NOW" for a in unique_alerts)
+    }
+
 @api_router.post("/meal-plan/mark-prepped")
 async def mark_meal_prepped(meal_id: str, dates: List[str]):
     """Mark a batch-prepped meal as ready for specific dates and deduct ingredients from inventory"""
