@@ -517,9 +517,19 @@ function App() {
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
             </p>
           </div>
-          <button onClick={() => setActiveModal('settings')} className="p-2 hover:bg-slate-700 rounded-full transition" data-testid="settings-button">
-            <Settings className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={toggleNotifications} 
+              className={`p-2 rounded-full transition ${notificationsEnabled ? 'bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30' : 'hover:bg-slate-700 text-slate-400'}`}
+              title={notificationsEnabled ? 'Notifications enabled' : 'Enable notifications'}
+              data-testid="notifications-toggle"
+            >
+              {notificationsEnabled ? <Bell className="w-5 h-5" /> : <BellOff className="w-5 h-5" />}
+            </button>
+            <button onClick={() => setActiveModal('settings')} className="p-2 hover:bg-slate-700 rounded-full transition" data-testid="settings-button">
+              <Settings className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </header>
 
