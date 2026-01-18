@@ -849,7 +849,7 @@ function WorkoutCues() {
 }
 
 // Meal Planner Modal
-function MealPlannerModal({ mealPlan, extendedLibrary, selectedWeeks, setSelectedWeeks, onGenerate, aiLoading }) {
+function MealPlannerModal({ mealPlan, setMealPlan, extendedLibrary, selectedWeeks, setSelectedWeeks, onGenerate, aiLoading }) {
   const [swapModalOpen, setSwapModalOpen] = useState(false);
   const [swapTarget, setSwapTarget] = useState(null);
 
@@ -873,15 +873,30 @@ function MealPlannerModal({ mealPlan, extendedLibrary, selectedWeeks, setSelecte
       
       console.log('Swap response:', response.data);
       
-      // Reload all data instead of full page reload
-      await loadAllData();
+      // Find the new meal data from extendedLibrary
+      const newMealData = extendedLibrary[swapTarget.mealType]?.find(m => m.id === newMealId);
+      
+      // Directly update the mealPlan state for instant UI feedback
+      if (newMealData) {
+        setMealPlan(currentPlan =>
+          currentPlan.map(entry =>
+            (entry.date === swapTarget.date && entry.meal_type === swapTarget.mealType)
+              ? { 
+                  ...entry, 
+                  meal_id: newMealId, 
+                  meal_name: newMealData.name, 
+                  calories: newMealData.calories, 
+                  protein: newMealData.protein,
+                  is_prepped: false
+                }
+              : entry
+          )
+        );
+      }
       
       // Close modal after successful swap
       setSwapModalOpen(false);
       setSwapTarget(null);
-      
-      // Show success feedback
-      alert('✅ Meal swapped successfully!');
       
     } catch (error) {
       console.error("Error swapping meal:", error);
