@@ -940,18 +940,24 @@ async def toggle_purchased(item_index: int):
     
     items = list_doc.get("items", [])
     if 0 <= item_index < len(items):
-        items[item_index]["purchased"] = not items[item_index].get("purchased", False)
+        was_purchased = items[item_index].get("purchased", False)
+        items[item_index]["purchased"] = not was_purchased
         
-        # If purchased, add to inventory
+        item_name = items[item_index]["item"]
+        
         if items[item_index]["purchased"]:
+            # Add to inventory when checking off
             inventory_item = {
-                "item": items[item_index]["item"],
+                "item": item_name,
                 "amount": items[item_index]["amount"],
                 "category": items[item_index]["category"],
                 "purchased_date": datetime.now().strftime("%Y-%m-%d"),
                 "expiry_date": None
             }
             await db.inventory.insert_one(inventory_item)
+        else:
+            # Remove from inventory when unchecking (bug fix)
+            await db.inventory.delete_one({"item": item_name})
     
     await db.shopping_list.update_one(
         {"_id": "user_shopping_list"},
@@ -965,6 +971,52 @@ async def get_inventory():
     """Get current food inventory"""
     inventory = await db.inventory.find({}, {"_id": 0}).to_list(1000)
     return {"inventory": inventory}
+
+# ========== INVENTORY MANAGEMENT ==========
+
+class InventoryAddRequest(BaseModel):
+    item: str
+    amount: str
+    category: str
+
+class InventoryUpdateRequest(BaseModel):
+    item: str
+    amount: str
+
+@api_router.post("/inventory/add")
+async def add_inventory_item(req: InventoryAddRequest):
+    """Manually add an item to inventory"""
+    inventory_item = {
+        "item": req.item,
+        "amount": req.amount,
+        "category": req.category,
+        "purchased_date": datetime.now().strftime("%Y-%m-%d"),
+        "expiry_date": None
+    }
+    await db.inventory.insert_one(inventory_item)
+    inventory = await db.inventory.find({}, {"_id": 0}).to_list(1000)
+    return {"success": True, "inventory": inventory}
+
+@api_router.post("/inventory/update")
+async def update_inventory_item(req: InventoryUpdateRequest):
+    """Update quantity of an inventory item"""
+    result = await db.inventory.update_one(
+        {"item": req.item},
+        {"$set": {"amount": req.amount}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Item not found in inventory")
+    inventory = await db.inventory.find({}, {"_id": 0}).to_list(1000)
+    return {"success": True, "inventory": inventory}
+
+@api_router.delete("/inventory/{item_name}")
+async def delete_inventory_item(item_name: str):
+    """Remove an item from inventory"""
+    result = await db.inventory.delete_one({"item": item_name})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Item not found in inventory")
+    inventory = await db.inventory.find({}, {"_id": 0}).to_list(1000)
+    return {"success": True, "inventory": inventory}
 
 @api_router.get("/meal-plan/suggestions-today")
 async def get_today_suggestions():
