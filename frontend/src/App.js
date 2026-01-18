@@ -155,6 +155,24 @@ function App() {
     }
   };
 
+  const setCalorieTarget = async (target) => {
+    try {
+      const res = await axios.post(`${API}/settings/calorie/set-target?target=${target}`);
+      setSettings({ ...settings, calorie_target: res.data.calorie_target });
+    } catch (error) {
+      console.error("Error setting calorie target:", error);
+    }
+  };
+
+  const addCalories = async (amount) => {
+    try {
+      const res = await axios.post(`${API}/settings/calorie/add?amount=${amount}`);
+      setSettings({ ...settings, calorie_current: res.data.calorie_current });
+    } catch (error) {
+      console.error("Error adding calories:", error);
+    }
+  };
+
   const toggleSupplement = async (index) => {
     try {
       const res = await axios.post(`${API}/supplements/toggle?index=${index}`);
