@@ -20,135 +20,105 @@ Working father with 2 kids, working towards 12% body fat goal.
    - Recipe scaling for family vs. individual portions
 5. **Caloric Intake Management:** Set daily targets, suggest meals to meet targets
 6. **Weekly Summary & Workout Tracking:** Track weekly stats and log workouts
+7. **Intuitive Workflow:** Onboarding, Today's Focus section, seamless navigation
+
+## Optimized User Workflow
+
+### Day 1: First Time User
+1. **Onboarding Modal** walks user through:
+   - Step 1: Set calorie target (4 preset options)
+   - Step 2: Generate meal plan (1-4 weeks)
+   - Step 3: Welcome with daily flow explanation
+2. User starts with populated dashboard
+
+### Weekly Planning (Sunday)
+1. Open "Plan Meals" → Select weeks → Generate
+2. Review meals, swap any disliked ones
+3. **"Next: View Shopping List"** button guides to shopping
+4. Copy list to phone if needed
+
+### Shopping Day
+1. Use "Shop" quick action → Check items off
+2. Items auto-add to inventory
+3. Uncheck if mistake → auto-removes from inventory
+
+### Prep Day
+1. See "Prep Reminders" on dashboard
+2. Click **"Recipe"** button directly from prep task
+3. Mark done → Ingredients deducted
+
+### Daily Flow
+1. **Today's Focus** section at top shows:
+   - Habit toggle (one click)
+   - Workout toggle (opens logger)
+   - Meals status (quick glance)
+2. **Goal Progress bar** shows BF% progress toward 12% goal
+3. Quick actions for Meals, Shop, Prep
+4. Log workout (auto-fills from schedule)
+
+### Weekly Review
+1. Weekly Summary shows: Habits %, Prep %, Workouts, Body change
+2. "Get AI Coaching" for personalized feedback
 
 ## What's Been Implemented
 
 ### December 2025 - January 2026
 - **Full-Stack Migration:** Converted HTML to React + FastAPI + MongoDB
-- **AI Integration:** Gemini 2.5 Pro for recipes, motivation, and weekly coaching (via Emergent LLM Key)
-- **Backend APIs:**
-  - Habits tracking with streak calculation
-  - Body metrics logging with Navy body fat formula
-  - Supplement tracking
-  - Protein, water, alcohol counters
-  - Calorie target setting and tracking
-  - Complete meal planning system (generate, save, update/swap)
-  - Shopping list generation and tracking
-  - Inventory management with full CRUD (add, edit, delete)
-  - Prep task management for batch cooking
-  - Prep alerts API - Returns urgency (NOW/TOMORROW) for upcoming prep
-  - Today's smart suggestions based on prep status
-  - Recipe scaling API - Returns individual or family portions
-  - **Weekly Summary API** - Returns comprehensive weekly stats
-  - **AI Weekly Coaching** - Generates personalized feedback based on stats
-  - **Workout CRUD** - Full workout tracking with exercises
-  - **Exercise Progress API** - Track progress for specific exercises
+- **AI Integration:** Gemini 2.5 Pro for recipes, motivation, and weekly coaching
+- **Backend APIs:** Complete CRUD for all features
 - **Frontend:**
+  - **Onboarding flow** (3-step setup for new users)
+  - **Goal Progress bar** (BF% → 12% goal visualization)
+  - **Today's Focus section** (Habit toggle, Workout toggle, Meals status)
+  - **Quick action buttons** (Meals, Shop, Prep)
   - Dashboard with all tracking widgets
-  - Momentum section with 2-day rule tracking
-  - Body Analytics with progress bars
-  - Meal Planner modal with swap functionality
-  - Shopping List modal with **Copy to Clipboard** feature
-  - Prep Checklist modal
-  - Inventory modal with manual editing
-  - AI Response formatting for recipes
-  - Calorie settings modal
-  - Prep Alerts section - Urgent prep reminders on dashboard
-  - Notification toggle - Enable/disable browser notifications
-  - Recipe scaling buttons - Individual vs Family portion buttons
-  - **Weekly Summary section** - 4 stat cards (Habits, Prep, Workouts, Body)
-  - **Get AI Coaching button** - Personalized weekly feedback
-  - **Workout Tracker section** - Today's workout display
-  - **Log Workout modal** - Full workout logging with exercise suggestions
+  - Meal Planner with **"Next: View Shopping List"** navigation
+  - Prep Checklist with **Recipe buttons** for each task
+  - Shopping List with Copy to Clipboard
+  - Inventory modal with full CRUD
+  - Weekly Summary with AI Coaching
+  - Workout Tracker with auto-fill from schedule
 
 ### Bug Fixes
-- [FIXED] Meal swap UI not updating (Dec 2025)
-- [FIXED] Shopping list toggle inventory bug (Dec 2025)
-- [FIXED] Settings endpoint missing defaults (Dec 2025)
-
-### New Features (Jan 2026)
-- Manual inventory editing: Add items, edit quantities, delete items
-- Ingredients auto-deducted from inventory when marking prep complete
-- P1: Prep Day Reminders - Dashboard alerts for meals needing prep
-- P2: Push Notifications - Browser notification support with service worker
-- P2: Recipe Scaling - Individual vs Family serving size toggle
-- **Weekly Summary Report** - Comprehensive weekly stats display
-- **AI Weekly Coaching** - Get personalized AI feedback on your week
-- **Workout Tracking** - Log workouts with exercises, sets, reps, weight
-- **Exercise Progress Tracking** - Track progress on specific exercises
-- **Shopping List Export** - Copy list to clipboard for easy sharing
+- [FIXED] Meal swap UI not updating
+- [FIXED] Shopping list toggle inventory bug
+- [FIXED] Settings endpoint missing defaults
+- [FIXED] Daily habit toggle API endpoint
+- [FIXED] Recipe button React state timing issue
 
 ## Architecture
 ```
 /app/
 ├── backend/
-│   ├── .env (MONGO_URL, DB_NAME, EMERGENT_LLM_KEY)
-│   ├── meal_data.py (Extended meal library with metadata)
 │   ├── server.py (FastAPI with all APIs)
-│   └── tests/
-│       ├── test_inventory_features.py
-│       ├── test_prep_alerts_and_recipe_scaling.py
-│       └── test_weekly_summary_and_workouts.py
+│   └── meal_data.py (Extended meal library)
 ├── frontend/
-│   ├── .env (REACT_APP_BACKEND_URL)
-│   ├── public/
-│   │   └── sw.js (Service worker for notifications)
-│   └── src/
-│       ├── App.js (Main app with all components)
-│       └── App.css
-└── memory/
-    └── PRD.md
+│   ├── public/sw.js (Service worker)
+│   └── src/App.js (Main app)
+└── memory/PRD.md
 ```
 
 ## Key API Endpoints
-- `POST /api/meal-plan/generate` - Generate meal plan
-- `POST /api/meal-plan/save` - Save meal plan
-- `POST /api/meal-plan/update-meal` - Swap a meal in the plan
-- `POST /api/meal-plan/mark-prepped` - Mark meal prepped (deducts ingredients)
-- `GET /api/meal-plan/prep-alerts` - Get urgent prep reminders
-- `GET /api/shopping-list/generate` - Generate shopping list
-- `POST /api/shopping-list/toggle-purchased` - Toggle item (adds/removes from inventory)
-- `POST /api/inventory/add` - Manually add item
-- `POST /api/inventory/update` - Update item quantity
-- `DELETE /api/inventory/{item_name}` - Remove item
-- `POST /api/ai/recipe` - Generate recipe (with servings: individual/family)
-- `POST /api/ai/motivation` - Get motivational message
-- `GET /api/summary/weekly` - Get weekly summary stats
-- `POST /api/ai/weekly-coaching` - Get AI coaching feedback
-- `GET /api/workouts` - Get recent workouts
-- `POST /api/workouts` - Log a workout
-- `GET /api/workouts/progress/{exercise}` - Get exercise progress
-
-## Database Collections
-- `habits` - Daily habit tracking
-- `metrics` - Body measurements
-- `settings` - User settings and counters
-- `supplements` - Supplement list
-- `meal_plan` - Saved meal plan
-- `shopping_list` - Shopping list items
-- `inventory` - Purchased ingredients
-- `workouts` - Workout log entries
+- Meal planning: generate, save, update-meal, mark-prepped, prep-alerts
+- Shopping: generate, save, toggle-purchased
+- Inventory: add, update, delete
+- AI: recipe (with scaling), motivation, weekly-coaching
+- Summary: weekly
+- Workouts: CRUD + progress tracking
 
 ## 3rd Party Integrations
-- **Google Gemini 2.5 Pro** via `emergentintegrations` library using Emergent LLM Key
+- **Google Gemini 2.5 Pro** via Emergent LLM Key
 
-## Prioritized Backlog
+## Prioritized Backlog - COMPLETED
+- [x] All P0-P2 features
+- [x] UX workflow improvements
+- [x] Onboarding flow
+- [x] Goal progress visualization
+- [x] Today's Focus section
+- [x] Recipe buttons in Prep Checklist
+- [x] Navigation improvements
 
-### P0-P2 - COMPLETED
-- [x] Meal swap UI update bug
-- [x] Shopping list toggle inventory bug
-- [x] Manual inventory editing
-- [x] Prep Day Reminders
-- [x] Push Notifications
-- [x] Recipe scaling UI
-- [x] Weekly Summary Report
-- [x] Workout Tracking
-- [x] Shopping list copy to clipboard
-
-### P3 (Low Priority/Future)
-- [ ] Integration with grocery delivery APIs (Target, etc.)
+## Future Enhancements (P3)
+- [ ] Exercise progress charts/graphs
 - [ ] Progress photo tracking
-- [ ] Exercise progress graphs/charts
-
-## Refactoring Needed
-- [ ] Break down App.js (2200+ lines) into smaller components
+- [ ] Grocery delivery API integration
