@@ -544,7 +544,7 @@ async def generate_recipe(req: RecipeRequest):
     
     prompt = f"""Generate a detailed recipe for: {req.meal_name}
 
-Blueprint: {req.blueprint}
+Blueprint: {req.meal_blueprint}
 Category: {req.category}
 
 Please provide:
