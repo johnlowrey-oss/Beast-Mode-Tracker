@@ -730,7 +730,7 @@ function App() {
       </Modal>
 
       <Modal isOpen={activeModal === 'inventory'} onClose={() => setActiveModal(null)} title="Ingredient Stock">
-        <InventoryModal inventory={inventory} />
+        <InventoryModal inventory={inventory} setInventory={setInventory} />
       </Modal>
 
       <Modal isOpen={activeModal === 'ai-response'} onClose={() => setActiveModal(null)} title={aiResponse?.title || 'AI Response'}>
