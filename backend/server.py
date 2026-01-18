@@ -560,7 +560,30 @@ async def get_today_schedule():
 
 @api_router.post("/ai/recipe")
 async def generate_recipe(req: RecipeRequest):
-    """Generate a detailed recipe using AI"""
+    """Generate a detailed recipe using AI with optional scaling for family portions"""
+    
+    # Get meal data for scaling info
+    meal_data = None
+    if req.meal_id:
+        for category_meals in EXTENDED_MEAL_LIBRARY.values():
+            for m in category_meals:
+                if m["id"] == req.meal_id:
+                    meal_data = m
+                    break
+            if meal_data:
+                break
+    
+    # Determine serving size
+    dad_servings = meal_data.get("dad_servings", 1) if meal_data else 1
+    family_servings = meal_data.get("family_servings", 4) if meal_data else 4
+    
+    if req.servings == "family":
+        serving_text = f"FAMILY SIZE ({family_servings} servings)"
+        scale_note = f"Scale all ingredients by {family_servings}x for family portions."
+    else:
+        serving_text = f"INDIVIDUAL ({dad_servings} serving)"
+        scale_note = "Standard single serving for your meal prep."
+    
     system_message = """You are an expert meal prep coach for busy fathers focused on physique transformation. 
     Create detailed, practical recipes that are:
     - High in protein (key macro)
@@ -573,18 +596,20 @@ async def generate_recipe(req: RecipeRequest):
 
 Blueprint: {req.meal_blueprint}
 Category: {req.category}
+Serving Size: {serving_text}
+Scaling Note: {scale_note}
 
 Please provide:
-1. **Ingredients** (exact measurements)
+1. **Ingredients** (exact measurements for {serving_text})
 2. **Prep Instructions** (step-by-step)
 3. **Macros Per Serving** (calories, protein, carbs, fat)
 4. **Meal Prep Tips** (how to batch cook and store)
-5. **Family Modifications** (how to make it kid-friendly)
+5. **Family Modifications** (how to make it kid-friendly if individual, or how dad can add extra protein if family size)
 
 Focus on efficiency and high protein content for a 30-year-old father working towards 12% body fat."""
     
     response = await get_ai_response(prompt, system_message)
-    return {"recipe": response}
+    return {"recipe": response, "servings": req.servings, "serving_count": family_servings if req.servings == "family" else dad_servings}
 
 @api_router.post("/ai/motivation")
 async def get_motivation(req: AIRequest):
