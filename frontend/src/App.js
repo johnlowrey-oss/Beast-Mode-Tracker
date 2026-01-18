@@ -1,10 +1,62 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import "./App.css";
 import axios from "axios";
-import { Calendar, Activity, Dumbbell, Utensils, Pill, Zap, BarChart2, Plus, Minus, Check, Circle, X, Settings, RefreshCw, Timer, ShoppingCart, Info, ChefHat, ClipboardList, Package, AlertCircle, CheckCircle2, AlertTriangle, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
+import { Calendar, Activity, Dumbbell, Utensils, Pill, Zap, BarChart2, Plus, Minus, Check, Circle, X, Settings, RefreshCw, Timer, ShoppingCart, Info, ChefHat, ClipboardList, Package, AlertCircle, CheckCircle2, AlertTriangle, ChevronRight, Calendar as CalendarIcon, Bell, BellOff } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+
+// Notification utilities
+const registerServiceWorker = async () => {
+  if ('serviceWorker' in navigator) {
+    try {
+      const registration = await navigator.serviceWorker.register('/sw.js');
+      console.log('Service Worker registered:', registration);
+      return registration;
+    } catch (error) {
+      console.error('Service Worker registration failed:', error);
+      return null;
+    }
+  }
+  return null;
+};
+
+const requestNotificationPermission = async () => {
+  if (!('Notification' in window)) {
+    console.log('Notifications not supported');
+    return 'unsupported';
+  }
+  
+  if (Notification.permission === 'granted') {
+    return 'granted';
+  }
+  
+  if (Notification.permission !== 'denied') {
+    const permission = await Notification.requestPermission();
+    return permission;
+  }
+  
+  return Notification.permission;
+};
+
+const showLocalNotification = (title, body, options = {}) => {
+  if (Notification.permission === 'granted') {
+    const notification = new Notification(title, {
+      body,
+      icon: '/favicon.ico',
+      tag: options.tag || 'beast-hub',
+      ...options
+    });
+    
+    notification.onclick = () => {
+      window.focus();
+      notification.close();
+    };
+    
+    return notification;
+  }
+  return null;
+};
 
 function App() {
   const [loading, setLoading] = useState(true);
