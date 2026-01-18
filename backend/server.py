@@ -373,10 +373,34 @@ async def reset_weekly_counters():
     """Reset weekly counters (alcohol, water)"""
     await db.settings.update_one(
         {"_id": "user_settings"},
-        {"$set": {"alcohol_count": 0, "water_liters": 0.0, "protein_current": 0}},
+        {"$set": {"alcohol_count": 0, "water_liters": 0.0, "protein_current": 0, "calorie_current": 0}},
         upsert=True
     )
     return {"success": True}
+
+@api_router.post("/settings/calorie/add")
+async def add_calories(amount: int):
+    """Add calories consumed"""
+    settings_doc = await db.settings.find_one({"_id": "user_settings"})
+    current = settings_doc.get("calorie_current", 0) if settings_doc else 0
+    new_amount = current + amount
+    
+    await db.settings.update_one(
+        {"_id": "user_settings"},
+        {"$set": {"calorie_current": new_amount}},
+        upsert=True
+    )
+    return {"calorie_current": new_amount}
+
+@api_router.post("/settings/calorie/set-target")
+async def set_calorie_target(target: int):
+    """Set daily calorie target"""
+    await db.settings.update_one(
+        {"_id": "user_settings"},
+        {"$set": {"calorie_target": target}},
+        upsert=True
+    )
+    return {"calorie_target": target}
 
 # ========== SUPPLEMENTS ==========
 
