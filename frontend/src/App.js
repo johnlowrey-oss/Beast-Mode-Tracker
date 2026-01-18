@@ -845,7 +845,8 @@ function MealPlannerModal({ mealPlan, extendedLibrary, selectedWeeks, setSelecte
   const [swapModalOpen, setSwapModalOpen] = useState(false);
   const [swapTarget, setSwapTarget] = useState(null);
 
-  const handleSwapMeal = async (date, mealType, currentMealId) => {
+  const handleSwapMeal = (date, mealType, currentMealId, e) => {
+    e.stopPropagation();
     setSwapTarget({ date, mealType, currentMealId });
     setSwapModalOpen(true);
   };
@@ -869,170 +870,173 @@ function MealPlannerModal({ mealPlan, extendedLibrary, selectedWeeks, setSelecte
   };
 
   return (
-    <div className="space-y-6">
-      {mealPlan.length === 0 ? (
-        <div className="text-center py-10">
-          <h3 className="text-lg font-bold text-blue-400 mb-4">Generate Your Meal Plan</h3>
-          <p className="text-sm text-slate-400 mb-6">Plan 1-4 weeks of meals with automatic shopping list generation</p>
-          
-          <div className="max-w-md mx-auto mb-6">
-            <label className="block text-xs font-bold text-slate-300 mb-2 uppercase tracking-wider">Plan Duration</label>
-            <div className="grid grid-cols-4 gap-2">
-              {[1, 2, 3, 4].map((weeks) => (
+    <>
+      <div className="space-y-6">
+        {mealPlan.length === 0 ? (
+          <div className="text-center py-10">
+            <h3 className="text-lg font-bold text-blue-400 mb-4">Generate Your Meal Plan</h3>
+            <p className="text-sm text-slate-400 mb-6">Plan 1-4 weeks of meals with automatic shopping list generation</p>
+            
+            <div className="max-w-md mx-auto mb-6">
+              <label className="block text-xs font-bold text-slate-300 mb-2 uppercase tracking-wider">Plan Duration</label>
+              <div className="grid grid-cols-4 gap-2">
+                {[1, 2, 3, 4].map((weeks) => (
+                  <button
+                    key={weeks}
+                    onClick={() => setSelectedWeeks(weeks)}
+                    className={`py-3 px-4 rounded-xl font-bold text-sm transition ${
+                      selectedWeeks === weeks
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    }`}
+                  >
+                    {weeks}w
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={onGenerate}
+              disabled={aiLoading}
+              className="bg-gradient-to-r from-blue-600 to-emerald-600 px-8 py-4 rounded-xl font-black uppercase tracking-widest text-white shadow-lg hover:scale-105 transition disabled:opacity-50"
+            >
+              {aiLoading ? 'Generating...' : `Generate ${selectedWeeks}-Week Plan ✨`}
+            </button>
+
+            <div className="mt-8 text-xs text-slate-500 space-y-1">
+              <p>✓ Auto-rotates high-protein meals</p>
+              <p>✓ Identifies batch prep requirements</p>
+              <p>✓ Generates complete shopping list</p>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="text-lg font-bold text-emerald-400">{Math.ceil(mealPlan.length / 3)}-Day Plan Active</h3>
+                <p className="text-xs text-slate-400">{mealPlan.length} meals planned</p>
+              </div>
+              <button
+                onClick={onGenerate}
+                className="bg-slate-700 px-4 py-2 rounded-lg text-xs font-bold uppercase hover:bg-slate-600 transition"
+              >
+                Regenerate
+              </button>
+            </div>
+
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 mb-4">
+              <p className="text-xs text-blue-300">
+                💡 <strong>Tip:</strong> Click any meal to shuffle and pick a different option!
+              </p>
+            </div>
+
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
+              {Array.from({ length: Math.ceil(mealPlan.length / 3) }, (_, dayIndex) => {
+                const dayMeals = mealPlan.filter((m, idx) => Math.floor(idx / 3) === dayIndex);
+                if (dayMeals.length === 0) return null;
+
+                const date = new Date(dayMeals[0].date);
+                const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+                const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+                return (
+                  <div key={dayIndex} className="bg-slate-700/30 rounded-xl p-4 border border-slate-600/50">
+                    <div className="flex items-center gap-2 mb-3">
+                      <CalendarIcon className="w-4 h-4 text-blue-400" />
+                      <h4 className="font-black text-sm uppercase text-blue-400">{dayName}</h4>
+                      <span className="text-xs text-slate-500">{dateStr}</span>
+                    </div>
+                    <div className="space-y-2">
+                      {dayMeals.map((meal, idx) => {
+                        const mealData = Object.values(extendedLibrary).flat().find(m => m.id === meal.meal_id);
+                        return (
+                          <button
+                            key={idx}
+                            onClick={(e) => handleSwapMeal(meal.date, meal.meal_type, meal.meal_id, e)}
+                            className="w-full flex items-center justify-between bg-slate-800/50 p-3 rounded-lg hover:bg-slate-700 transition border border-slate-700 hover:border-blue-500 cursor-pointer"
+                          >
+                            <div className="flex items-center gap-3">
+                              {meal.is_prepped ? (
+                                <Check className="w-4 h-4 text-emerald-500" />
+                              ) : mealData?.requires_advance_prep ? (
+                                <AlertTriangle className="w-4 h-4 text-yellow-500" />
+                              ) : (
+                                <Circle className="w-4 h-4 text-slate-600" />
+                              )}
+                              <div className="text-left">
+                                <p className="text-xs font-bold capitalize text-slate-300">{meal.meal_type}</p>
+                                <p className="text-[11px] text-slate-100 font-bold">{meal.meal_name}</p>
+                                <p className="text-[9px] text-slate-400">{mealData?.calories} cal | {mealData?.protein}g P</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {meal.is_prepped && (
+                                <span className="text-[8px] px-2 py-1 rounded bg-emerald-500/20 text-emerald-400 font-black">READY</span>
+                              )}
+                              <RefreshCw className="w-4 h-4 text-blue-400" />
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              }).filter(Boolean)}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Meal Swap Modal - Rendered as Portal */}
+      {swapModalOpen && swapTarget && (
+        <div className="fixed inset-0 bg-black/95 z-[80] flex items-center justify-center p-4" onClick={(e) => { e.stopPropagation(); setSwapModalOpen(false); }}>
+          <div className="bg-slate-800 rounded-2xl w-full max-w-2xl p-6 border border-slate-700 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-700">
+              <div>
+                <h3 className="text-lg font-black text-blue-400 uppercase">Choose {swapTarget.mealType}</h3>
+                <p className="text-xs text-slate-400 mt-1">Click to swap your meal</p>
+              </div>
+              <button onClick={(e) => { e.stopPropagation(); setSwapModalOpen(false); }} className="text-slate-400 p-2 hover:bg-slate-700 rounded-full transition">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="space-y-2">
+              {extendedLibrary[swapTarget.mealType]?.map((meal) => (
                 <button
-                  key={weeks}
-                  onClick={() => setSelectedWeeks(weeks)}
-                  className={`py-3 px-4 rounded-xl font-bold text-sm transition ${
-                    selectedWeeks === weeks
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  key={meal.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    confirmSwap(meal.id);
+                    setSwapModalOpen(false);
+                  }}
+                  className={`w-full p-4 rounded-xl text-left transition border-2 ${
+                    meal.id === swapTarget.currentMealId
+                      ? 'bg-blue-600/20 border-blue-500'
+                      : 'bg-slate-700/50 border-slate-600 hover:border-blue-500 hover:bg-slate-700'
                   }`}
                 >
-                  {weeks}w
+                  <div className="flex justify-between items-start mb-2">
+                    <p className="font-bold text-sm">{meal.name}</p>
+                    {meal.id === swapTarget.currentMealId && (
+                      <span className="text-[8px] px-2 py-1 rounded bg-blue-500/20 text-blue-400 font-black">CURRENT</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-400 mb-2">{meal.blueprint}</p>
+                  <div className="flex items-center gap-3 text-[10px]">
+                    <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded font-bold">{meal.calories} cal</span>
+                    <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded font-bold">{meal.protein}g P</span>
+                    {meal.requires_advance_prep && (
+                      <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded font-bold">⚠️ PREP</span>
+                    )}
+                  </div>
                 </button>
               ))}
             </div>
           </div>
-
-          <button
-            onClick={onGenerate}
-            disabled={aiLoading}
-            className="bg-gradient-to-r from-blue-600 to-emerald-600 px-8 py-4 rounded-xl font-black uppercase tracking-widest text-white shadow-lg hover:scale-105 transition disabled:opacity-50"
-          >
-            {aiLoading ? 'Generating...' : `Generate ${selectedWeeks}-Week Plan ✨`}
-          </button>
-
-          <div className="mt-8 text-xs text-slate-500 space-y-1">
-            <p>✓ Auto-rotates high-protein meals</p>
-            <p>✓ Identifies batch prep requirements</p>
-            <p>✓ Generates complete shopping list</p>
-          </div>
-        </div>
-      ) : (
-        <div>
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h3 className="text-lg font-bold text-emerald-400">{Math.ceil(mealPlan.length / 3)}-Day Plan Active</h3>
-              <p className="text-xs text-slate-400">{mealPlan.length} meals planned</p>
-            </div>
-            <button
-              onClick={onGenerate}
-              className="bg-slate-700 px-4 py-2 rounded-lg text-xs font-bold uppercase hover:bg-slate-600 transition"
-            >
-              Regenerate
-            </button>
-          </div>
-
-          <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 mb-4">
-            <p className="text-xs text-blue-300">
-              💡 <strong>Tip:</strong> Click any meal to shuffle and pick a different option!
-            </p>
-          </div>
-
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
-            {Array.from({ length: Math.ceil(mealPlan.length / 3) }, (_, dayIndex) => {
-              const dayMeals = mealPlan.filter((m, idx) => Math.floor(idx / 3) === dayIndex);
-              if (dayMeals.length === 0) return null;
-
-              const date = new Date(dayMeals[0].date);
-              const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
-              const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
-              return (
-                <div key={dayIndex} className="bg-slate-700/30 rounded-xl p-4 border border-slate-600/50">
-                  <div className="flex items-center gap-2 mb-3">
-                    <CalendarIcon className="w-4 h-4 text-blue-400" />
-                    <h4 className="font-black text-sm uppercase text-blue-400">{dayName}</h4>
-                    <span className="text-xs text-slate-500">{dateStr}</span>
-                  </div>
-                  <div className="space-y-2">
-                    {dayMeals.map((meal, idx) => {
-                      const mealData = Object.values(extendedLibrary).flat().find(m => m.id === meal.meal_id);
-                      return (
-                        <button
-                          key={idx}
-                          onClick={() => handleSwapMeal(meal.date, meal.meal_type, meal.meal_id)}
-                          className="w-full flex items-center justify-between bg-slate-800/50 p-3 rounded-lg hover:bg-slate-700 transition border border-slate-700 hover:border-blue-500"
-                        >
-                          <div className="flex items-center gap-3">
-                            {meal.is_prepped ? (
-                              <Check className="w-4 h-4 text-emerald-500" />
-                            ) : mealData?.requires_advance_prep ? (
-                              <AlertTriangle className="w-4 h-4 text-yellow-500" />
-                            ) : (
-                              <Circle className="w-4 h-4 text-slate-600" />
-                            )}
-                            <div className="text-left">
-                              <p className="text-xs font-bold capitalize text-slate-300">{meal.meal_type}</p>
-                              <p className="text-[11px] text-slate-100 font-bold">{meal.meal_name}</p>
-                              <p className="text-[9px] text-slate-400">{mealData?.calories} cal | {mealData?.protein}g P</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {meal.is_prepped && (
-                              <span className="text-[8px] px-2 py-1 rounded bg-emerald-500/20 text-emerald-400 font-black">READY</span>
-                            )}
-                            <RefreshCw className="w-4 h-4 text-blue-400" />
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            }).filter(Boolean)}
-          </div>
-
-          {/* Meal Swap Modal */}
-          {swapModalOpen && swapTarget && (
-            <div className="fixed inset-0 bg-black/90 z-[70] flex items-center justify-center p-4" onClick={() => setSwapModalOpen(false)}>
-              <div className="bg-slate-800 rounded-2xl w-full max-w-2xl p-6 border border-slate-700" onClick={(e) => e.stopPropagation()}>
-                <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-700">
-                  <div>
-                    <h3 className="text-lg font-black text-blue-400 uppercase">Choose {swapTarget.mealType}</h3>
-                    <p className="text-xs text-slate-400 mt-1">Click to swap your meal</p>
-                  </div>
-                  <button onClick={() => setSwapModalOpen(false)} className="text-slate-400 p-2 hover:bg-slate-700 rounded-full transition">
-                    <X className="w-6 h-6" />
-                  </button>
-                </div>
-                <div className="space-y-2 max-h-[60vh] overflow-y-auto custom-scrollbar">
-                  {extendedLibrary[swapTarget.mealType]?.map((meal) => (
-                    <button
-                      key={meal.id}
-                      onClick={() => {
-                        confirmSwap(meal.id);
-                        setSwapModalOpen(false);
-                      }}
-                      className={`w-full p-4 rounded-xl text-left transition border-2 ${
-                        meal.id === swapTarget.currentMealId
-                          ? 'bg-blue-600/20 border-blue-500'
-                          : 'bg-slate-700/50 border-slate-600 hover:border-blue-500 hover:bg-slate-700'
-                      }`}
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <p className="font-bold text-sm">{meal.name}</p>
-                        {meal.id === swapTarget.currentMealId && (
-                          <span className="text-[8px] px-2 py-1 rounded bg-blue-500/20 text-blue-400 font-black">CURRENT</span>
-                        )}
-                      </div>
-                      <p className="text-xs text-slate-400 mb-2">{meal.blueprint}</p>
-                      <div className="flex items-center gap-3 text-[10px]">
-                        <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded font-bold">{meal.calories} cal</span>
-                        <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded font-bold">{meal.protein}g P</span>
-                        {meal.requires_advance_prep && (
-                          <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded font-bold">⚠️ PREP</span>
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       )}
-    </div>
+    </>
   );
 }
 
