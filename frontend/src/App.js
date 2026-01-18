@@ -673,6 +673,16 @@ function App() {
         </div>
       </Modal>
 
+      <Modal isOpen={activeModal === 'calorie-settings'} onClose={() => setActiveModal(null)} title="Calorie Target">
+        <CalorieSettingsModal 
+          currentTarget={settings.calorie_target}
+          onSave={(target) => {
+            setCalorieTarget(target);
+            setActiveModal(null);
+          }}
+        />
+      </Modal>
+
       <Modal isOpen={activeModal === 'metrics'} onClose={() => setActiveModal(null)} title="Analytics">
         <MetricsModal metrics={metrics} settings={settings} onLog={logMetrics} />
       </Modal>
