@@ -560,9 +560,9 @@ function Modal({ isOpen, onClose, title, children }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 overflow-y-auto" onClick={onClose}>
-      <div className="bg-slate-800 rounded-2xl w-full max-w-2xl p-6 my-10 border border-slate-700" onClick={(e) => e.stopPropagation()}>
-        <div className="flex justify-between items-center mb-6">
+    <div className="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-4 overflow-y-auto" onClick={onClose}>
+      <div className="bg-slate-800 rounded-2xl w-full max-w-3xl p-6 my-10 border border-slate-700 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-700">
           <h2 className="text-xl font-black text-blue-400 uppercase tracking-widest">{title}</h2>
           <button onClick={onClose} className="text-slate-400 p-2 hover:bg-slate-700 rounded-full transition">
             <X className="w-6 h-6" />
