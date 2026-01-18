@@ -131,6 +131,24 @@ class MealSelectionRequest(BaseModel):
     meal_type: str
     meal_id: str
 
+# ==================== WORKOUT TRACKING MODELS ====================
+
+class WorkoutSet(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    exercise: str
+    sets: int
+    reps: int
+    weight: float
+    notes: Optional[str] = None
+
+class WorkoutEntry(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    date: str  # YYYY-MM-DD
+    workout_type: str  # "Lower A", "Upper B", etc.
+    exercises: List[WorkoutSet] = []
+    duration_minutes: int = 0
+    notes: Optional[str] = None
+
 # ==================== MEAL LIBRARY ====================
 
 # Use extended meal library from meal_data.py
