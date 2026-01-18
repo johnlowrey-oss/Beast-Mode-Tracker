@@ -842,6 +842,32 @@ function WorkoutCues() {
 
 // Meal Planner Modal
 function MealPlannerModal({ mealPlan, extendedLibrary, selectedWeeks, setSelectedWeeks, onGenerate, aiLoading }) {
+  const [swapModalOpen, setSwapModalOpen] = useState(false);
+  const [swapTarget, setSwapTarget] = useState(null);
+
+  const handleSwapMeal = async (date, mealType, currentMealId) => {
+    setSwapTarget({ date, mealType, currentMealId });
+    setSwapModalOpen(true);
+  };
+
+  const confirmSwap = async (newMealId) => {
+    if (!swapTarget) return;
+    
+    try {
+      await axios.post(`${BACKEND_URL}/api/meal-plan/update-meal`, {
+        date: swapTarget.date,
+        meal_type: swapTarget.mealType,
+        meal_id: newMealId
+      });
+      
+      // Reload data
+      window.location.reload();
+    } catch (error) {
+      console.error("Error swapping meal:", error);
+      alert("Failed to swap meal. Please try again.");
+    }
+  };
+
   return (
     <div className="space-y-6">
       {mealPlan.length === 0 ? (
@@ -886,7 +912,7 @@ function MealPlannerModal({ mealPlan, extendedLibrary, selectedWeeks, setSelecte
         <div>
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h3 className="text-lg font-bold text-emerald-400">{mealPlan.length / 3}-Week Plan Active</h3>
+              <h3 className="text-lg font-bold text-emerald-400">{Math.ceil(mealPlan.length / 3)}-Day Plan Active</h3>
               <p className="text-xs text-slate-400">{mealPlan.length} meals planned</p>
             </div>
             <button
@@ -895,6 +921,12 @@ function MealPlannerModal({ mealPlan, extendedLibrary, selectedWeeks, setSelecte
             >
               Regenerate
             </button>
+          </div>
+
+          <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 mb-4">
+            <p className="text-xs text-blue-300">
+              💡 <strong>Tip:</strong> Click any meal to shuffle and pick a different option!
+            </p>
           </div>
 
           <div className="space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
@@ -917,8 +949,12 @@ function MealPlannerModal({ mealPlan, extendedLibrary, selectedWeeks, setSelecte
                     {dayMeals.map((meal, idx) => {
                       const mealData = Object.values(extendedLibrary).flat().find(m => m.id === meal.meal_id);
                       return (
-                        <div key={idx} className="flex items-center justify-between bg-slate-800/50 p-2 rounded-lg">
-                          <div className="flex items-center gap-2">
+                        <button
+                          key={idx}
+                          onClick={() => handleSwapMeal(meal.date, meal.meal_type, meal.meal_id)}
+                          className="w-full flex items-center justify-between bg-slate-800/50 p-3 rounded-lg hover:bg-slate-700 transition border border-slate-700 hover:border-blue-500"
+                        >
+                          <div className="flex items-center gap-3">
                             {meal.is_prepped ? (
                               <Check className="w-4 h-4 text-emerald-500" />
                             ) : mealData?.requires_advance_prep ? (
@@ -926,15 +962,19 @@ function MealPlannerModal({ mealPlan, extendedLibrary, selectedWeeks, setSelecte
                             ) : (
                               <Circle className="w-4 h-4 text-slate-600" />
                             )}
-                            <div>
-                              <p className="text-xs font-bold capitalize">{meal.meal_type}</p>
-                              <p className="text-[10px] text-slate-400">{meal.meal_name}</p>
+                            <div className="text-left">
+                              <p className="text-xs font-bold capitalize text-slate-300">{meal.meal_type}</p>
+                              <p className="text-[11px] text-slate-100 font-bold">{meal.meal_name}</p>
+                              <p className="text-[9px] text-slate-400">{mealData?.calories} cal | {mealData?.protein}g P</p>
                             </div>
                           </div>
-                          {meal.is_prepped && (
-                            <span className="text-[8px] px-2 py-1 rounded bg-emerald-500/20 text-emerald-400 font-black">READY</span>
-                          )}
-                        </div>
+                          <div className="flex items-center gap-2">
+                            {meal.is_prepped && (
+                              <span className="text-[8px] px-2 py-1 rounded bg-emerald-500/20 text-emerald-400 font-black">READY</span>
+                            )}
+                            <RefreshCw className="w-4 h-4 text-blue-400" />
+                          </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -942,6 +982,54 @@ function MealPlannerModal({ mealPlan, extendedLibrary, selectedWeeks, setSelecte
               );
             }).filter(Boolean)}
           </div>
+
+          {/* Meal Swap Modal */}
+          {swapModalOpen && swapTarget && (
+            <div className="fixed inset-0 bg-black/90 z-[70] flex items-center justify-center p-4" onClick={() => setSwapModalOpen(false)}>
+              <div className="bg-slate-800 rounded-2xl w-full max-w-2xl p-6 border border-slate-700" onClick={(e) => e.stopPropagation()}>
+                <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-700">
+                  <div>
+                    <h3 className="text-lg font-black text-blue-400 uppercase">Choose {swapTarget.mealType}</h3>
+                    <p className="text-xs text-slate-400 mt-1">Click to swap your meal</p>
+                  </div>
+                  <button onClick={() => setSwapModalOpen(false)} className="text-slate-400 p-2 hover:bg-slate-700 rounded-full transition">
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+                <div className="space-y-2 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                  {extendedLibrary[swapTarget.mealType]?.map((meal) => (
+                    <button
+                      key={meal.id}
+                      onClick={() => {
+                        confirmSwap(meal.id);
+                        setSwapModalOpen(false);
+                      }}
+                      className={`w-full p-4 rounded-xl text-left transition border-2 ${
+                        meal.id === swapTarget.currentMealId
+                          ? 'bg-blue-600/20 border-blue-500'
+                          : 'bg-slate-700/50 border-slate-600 hover:border-blue-500 hover:bg-slate-700'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <p className="font-bold text-sm">{meal.name}</p>
+                        {meal.id === swapTarget.currentMealId && (
+                          <span className="text-[8px] px-2 py-1 rounded bg-blue-500/20 text-blue-400 font-black">CURRENT</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-400 mb-2">{meal.blueprint}</p>
+                      <div className="flex items-center gap-3 text-[10px]">
+                        <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded font-bold">{meal.calories} cal</span>
+                        <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded font-bold">{meal.protein}g P</span>
+                        {meal.requires_advance_prep && (
+                          <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded font-bold">⚠️ PREP</span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
