@@ -713,12 +713,12 @@ function App() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className={`text-xs font-black px-3 py-1 rounded-full ${
+                    <span className={`text-xs font-bold px-3 py-1 rounded-full ${
                       alert.urgency === 'NOW' 
-                        ? 'bg-red-500 text-white' 
-                        : 'bg-yellow-500/20 text-yellow-400'
+                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' 
+                        : 'bg-slate-700 text-slate-300'
                     }`}>
-                      {alert.urgency === 'NOW' ? 'PREP TODAY' : 'PREP TOMORROW'}
+                      {alert.urgency === 'NOW' ? 'Today' : 'Tomorrow'}
                     </span>
                     <button 
                       onClick={() => markPrepComplete(alert.meal_id, [alert.meal_date])}
