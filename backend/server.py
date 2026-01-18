@@ -64,6 +64,8 @@ class UserSettings(BaseModel):
     model_config = ConfigDict(extra="ignore")
     protein_target: int = 200
     protein_current: int = 0
+    calorie_target: int = 2400  # NEW: Daily calorie target
+    calorie_current: int = 0     # NEW: Calories consumed today
     water_liters: float = 0.0
     alcohol_count: int = 0
     selected_meals: Dict[str, Any] = {}
