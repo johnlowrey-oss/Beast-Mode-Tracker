@@ -457,6 +457,89 @@ function App() {
           </section>
         )}
 
+        {/* Prep Alerts Section - Urgent Prep Reminders */}
+        {prepAlerts.alerts.length > 0 && (
+          <section 
+            className={`rounded-2xl border p-6 shadow-xl ${
+              prepAlerts.has_urgent 
+                ? 'bg-gradient-to-r from-red-900/40 to-orange-900/30 border-red-500/50 animate-pulse' 
+                : 'bg-gradient-to-r from-yellow-900/30 to-orange-900/20 border-yellow-500/30'
+            }`} 
+            data-testid="prep-alerts-section"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-bold flex items-center gap-2 uppercase tracking-widest">
+                <AlertTriangle className={`w-4 h-4 ${prepAlerts.has_urgent ? 'text-red-400' : 'text-yellow-400'}`} />
+                <span className={prepAlerts.has_urgent ? 'text-red-400' : 'text-yellow-400'}>
+                  {prepAlerts.has_urgent ? 'PREP NEEDED NOW!' : 'Upcoming Prep'}
+                </span>
+              </h2>
+              <button 
+                onClick={() => setActiveModal('prep-checklist')} 
+                className="text-xs text-yellow-400 font-bold hover:underline"
+              >
+                View All Prep Tasks
+              </button>
+            </div>
+            
+            <div className="space-y-3">
+              {prepAlerts.alerts.map((alert, idx) => (
+                <div 
+                  key={idx}
+                  className={`flex items-center justify-between p-4 rounded-xl border ${
+                    alert.urgency === 'NOW' 
+                      ? 'bg-red-500/10 border-red-500/40' 
+                      : 'bg-yellow-500/10 border-yellow-500/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`p-2 rounded-full ${
+                      alert.urgency === 'NOW' ? 'bg-red-500/20' : 'bg-yellow-500/20'
+                    }`}>
+                      <Timer className={`w-5 h-5 ${
+                        alert.urgency === 'NOW' ? 'text-red-400' : 'text-yellow-400'
+                      }`} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm">{alert.meal_name}</p>
+                      <p className="text-xs text-slate-400">
+                        For <span className="capitalize">{alert.meal_type}</span> on {new Date(alert.meal_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {alert.prep_time_minutes > 0 && (
+                          <span className="text-[9px] px-2 py-0.5 rounded bg-slate-700 text-slate-300">
+                            ~{alert.prep_time_minutes < 60 ? `${alert.prep_time_minutes}min` : `${Math.round(alert.prep_time_minutes/60)}hr`} prep
+                          </span>
+                        )}
+                        {alert.batch_prep_friendly && (
+                          <span className="text-[9px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">
+                            Batch x{alert.batch_size}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className={`text-xs font-black px-3 py-1 rounded-full ${
+                      alert.urgency === 'NOW' 
+                        ? 'bg-red-500 text-white' 
+                        : 'bg-yellow-500/20 text-yellow-400'
+                    }`}>
+                      {alert.urgency === 'NOW' ? 'PREP TODAY' : 'PREP TOMORROW'}
+                    </span>
+                    <button 
+                      onClick={() => markPrepComplete(alert.meal_id, [alert.meal_date])}
+                      className="block mt-2 text-[10px] text-emerald-400 font-bold hover:underline"
+                    >
+                      Mark Done
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Momentum Section */}
         <section className={`bg-slate-800 rounded-2xl border p-6 shadow-xl ${ruleBroken ? 'border-red-500 animate-pulse' : 'border-slate-700'}`} data-testid="momentum-section">
           <div className="flex items-center justify-between mb-4">
