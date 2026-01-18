@@ -33,6 +33,7 @@ function App() {
   const [prepTasks, setPrepTasks] = useState([]);
   const [todaySuggestions, setTodaySuggestions] = useState(null);
   const [inventory, setInventory] = useState([]);
+  const [prepAlerts, setPrepAlerts] = useState({ alerts: [], has_urgent: false });
   
   // UI State
   const [activeModal, setActiveModal] = useState(null);
