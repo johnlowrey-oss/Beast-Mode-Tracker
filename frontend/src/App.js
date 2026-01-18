@@ -1965,8 +1965,12 @@ function PrepChecklistModal({ tasks, onComplete, extendedLibrary, onGetRecipe })
                     {!task.completed && (
                       <>
                         <button
-                          onClick={() => onGetRecipe(task.meal_id, findMealType(task.meal_id))}
+                          onClick={() => {
+                            console.log('Recipe clicked for:', task.meal_id, findMealType(task.meal_id));
+                            onGetRecipe(task.meal_id, findMealType(task.meal_id));
+                          }}
                           className="bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition flex items-center gap-1"
+                          data-testid={`recipe-btn-${task.meal_id}`}
                         >
                           <ChefHat className="w-3 h-3" /> Recipe
                         </button>
