@@ -1267,6 +1267,228 @@ async def get_daily_totals(date: str):
         "meals": daily_meals
     }
 
+# ========== WEEKLY SUMMARY ==========
+
+@api_router.get("/summary/weekly")
+async def get_weekly_summary():
+    """Get comprehensive weekly summary stats"""
+    today = datetime.now()
+    week_start = today - timedelta(days=today.weekday())  # Monday
+    week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    # Generate date range for the week
+    week_dates = [(week_start + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)]
+    
+    # Get habits for the week
+    habits_doc = await db.habits.find_one({"_id": "user_habits"})
+    habits = habits_doc.get("habits", {}) if habits_doc else {}
+    
+    habits_completed = sum(1 for d in week_dates if habits.get(d, False))
+    habit_streak = 0
+    for i in range(len(week_dates) - 1, -1, -1):
+        if habits.get(week_dates[i], False):
+            habit_streak += 1
+        else:
+            break
+    
+    # Get meal plan stats
+    plan_doc = await db.meal_plan.find_one({"_id": "user_meal_plan"})
+    meals = plan_doc.get("meals", []) if plan_doc else []
+    
+    week_meals = [m for m in meals if m["date"] in week_dates]
+    meals_planned = len(week_meals)
+    meals_prepped = sum(1 for m in week_meals if m.get("is_prepped", False))
+    
+    # Calculate daily nutrition from planned meals
+    daily_nutrition = {}
+    for date in week_dates:
+        day_meals = [m for m in week_meals if m["date"] == date]
+        daily_nutrition[date] = {
+            "calories": sum(m.get("calories", 0) for m in day_meals),
+            "protein": sum(m.get("protein", 0) for m in day_meals)
+        }
+    
+    # Get settings for targets
+    settings_doc = await db.settings.find_one({"_id": "user_settings"})
+    calorie_target = settings_doc.get("calorie_target", 2400) if settings_doc else 2400
+    protein_target = settings_doc.get("protein_target", 200) if settings_doc else 200
+    
+    # Calculate days on target (within 10%)
+    days_calorie_target = sum(1 for d in daily_nutrition.values() 
+                              if d["calories"] >= calorie_target * 0.9 and d["calories"] <= calorie_target * 1.1)
+    days_protein_target = sum(1 for d in daily_nutrition.values() 
+                              if d["protein"] >= protein_target * 0.9)
+    
+    # Get workout stats
+    workouts = await db.workouts.find({"date": {"$in": week_dates}}, {"_id": 0}).to_list(100)
+    workouts_completed = len(workouts)
+    total_workout_minutes = sum(w.get("duration_minutes", 0) for w in workouts)
+    
+    # Get metrics progress
+    metrics = await db.metrics.find({}, {"_id": 0}).sort("timestamp", -1).to_list(10)
+    latest_metric = metrics[0] if metrics else None
+    week_ago_metric = None
+    for m in metrics:
+        if m.get("timestamp"):
+            metric_date = datetime.fromisoformat(m["timestamp"].replace("Z", "+00:00")) if isinstance(m["timestamp"], str) else m["timestamp"]
+            if metric_date < week_start:
+                week_ago_metric = m
+                break
+    
+    weight_change = None
+    bf_change = None
+    if latest_metric and week_ago_metric:
+        weight_change = round(latest_metric.get("weight", 0) - week_ago_metric.get("weight", 0), 1)
+        bf_change = round(latest_metric.get("body_fat", 0) - week_ago_metric.get("body_fat", 0), 1)
+    
+    return {
+        "week_start": week_start.strftime("%Y-%m-%d"),
+        "week_end": (week_start + timedelta(days=6)).strftime("%Y-%m-%d"),
+        "habits": {
+            "completed": habits_completed,
+            "total": 7,
+            "streak": habit_streak,
+            "rate": round(habits_completed / 7 * 100)
+        },
+        "meals": {
+            "planned": meals_planned,
+            "prepped": meals_prepped,
+            "prep_rate": round(meals_prepped / meals_planned * 100) if meals_planned > 0 else 0
+        },
+        "nutrition": {
+            "days_on_calorie_target": days_calorie_target,
+            "days_on_protein_target": days_protein_target,
+            "calorie_target": calorie_target,
+            "protein_target": protein_target,
+            "daily_breakdown": daily_nutrition
+        },
+        "workouts": {
+            "completed": workouts_completed,
+            "total_minutes": total_workout_minutes,
+            "sessions": workouts
+        },
+        "body_progress": {
+            "current_weight": latest_metric.get("weight") if latest_metric else None,
+            "current_bf": latest_metric.get("body_fat") if latest_metric else None,
+            "weight_change": weight_change,
+            "bf_change": bf_change
+        }
+    }
+
+@api_router.post("/ai/weekly-coaching")
+async def get_weekly_coaching():
+    """Get AI-generated weekly coaching feedback based on stats"""
+    # Get weekly summary
+    summary = await get_weekly_summary()
+    
+    system_message = """You are a supportive but direct strength coach for a 30-year-old father working towards 12% body fat.
+    Analyze the weekly stats and provide:
+    1. One thing they did well (be specific)
+    2. One thing to improve (actionable)
+    3. A motivating closing statement
+    Keep it under 100 words total. Be encouraging but honest."""
+    
+    prompt = f"""Weekly Stats:
+- Habits: {summary['habits']['completed']}/7 days ({summary['habits']['rate']}%)
+- Meals Prepped: {summary['meals']['prepped']}/{summary['meals']['planned']} ({summary['meals']['prep_rate']}%)
+- Workouts: {summary['workouts']['completed']} sessions, {summary['workouts']['total_minutes']} minutes
+- Body: Weight change {summary['body_progress']['weight_change'] or 'N/A'} lbs, BF change {summary['body_progress']['bf_change'] or 'N/A'}%
+
+Provide brief, impactful coaching feedback."""
+    
+    response = await get_ai_response(prompt, system_message)
+    return {"coaching": response, "summary": summary}
+
+# ========== WORKOUT TRACKING ==========
+
+@api_router.get("/workouts")
+async def get_workouts(limit: int = 20):
+    """Get recent workout entries"""
+    workouts = await db.workouts.find({}, {"_id": 0}).sort("date", -1).to_list(limit)
+    return {"workouts": workouts}
+
+@api_router.get("/workouts/{date}")
+async def get_workout_by_date(date: str):
+    """Get workout for a specific date"""
+    workout = await db.workouts.find_one({"date": date}, {"_id": 0})
+    if not workout:
+        return {"workout": None}
+    return {"workout": workout}
+
+@api_router.post("/workouts")
+async def log_workout(workout: WorkoutEntry):
+    """Log a workout session"""
+    workout_dict = workout.model_dump()
+    workout_dict["logged_at"] = datetime.now(timezone.utc).isoformat()
+    
+    # Upsert - update if exists for that date, insert if not
+    await db.workouts.update_one(
+        {"date": workout.date},
+        {"$set": workout_dict},
+        upsert=True
+    )
+    
+    return {"success": True, "workout": workout_dict}
+
+@api_router.post("/workouts/{date}/exercise")
+async def add_exercise_to_workout(date: str, exercise: WorkoutSet):
+    """Add an exercise to an existing workout"""
+    workout = await db.workouts.find_one({"date": date})
+    
+    if not workout:
+        # Create new workout
+        workout_dict = {
+            "date": date,
+            "workout_type": "Custom",
+            "exercises": [exercise.model_dump()],
+            "duration_minutes": 0,
+            "logged_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.workouts.insert_one(workout_dict)
+    else:
+        # Add exercise to existing workout
+        exercises = workout.get("exercises", [])
+        exercises.append(exercise.model_dump())
+        await db.workouts.update_one(
+            {"date": date},
+            {"$set": {"exercises": exercises}}
+        )
+    
+    updated = await db.workouts.find_one({"date": date}, {"_id": 0})
+    return {"success": True, "workout": updated}
+
+@api_router.delete("/workouts/{date}")
+async def delete_workout(date: str):
+    """Delete a workout entry"""
+    result = await db.workouts.delete_one({"date": date})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Workout not found")
+    return {"success": True}
+
+@api_router.get("/workouts/progress/{exercise}")
+async def get_exercise_progress(exercise: str, limit: int = 10):
+    """Get progress history for a specific exercise"""
+    # Find all workouts containing this exercise
+    workouts = await db.workouts.find(
+        {"exercises.exercise": {"$regex": exercise, "$options": "i"}},
+        {"_id": 0}
+    ).sort("date", -1).to_list(limit)
+    
+    progress = []
+    for workout in workouts:
+        for ex in workout.get("exercises", []):
+            if exercise.lower() in ex.get("exercise", "").lower():
+                progress.append({
+                    "date": workout["date"],
+                    "exercise": ex["exercise"],
+                    "sets": ex.get("sets", 0),
+                    "reps": ex.get("reps", 0),
+                    "weight": ex.get("weight", 0),
+                    "volume": ex.get("sets", 0) * ex.get("reps", 0) * ex.get("weight", 0)
+                })
+    
+    return {"exercise": exercise, "progress": progress}
+
 # Include the router in the main app
 app.include_router(api_router)
 
