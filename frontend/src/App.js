@@ -500,10 +500,42 @@ function App() {
               <p className="text-xl font-bold" data-testid="protein-total">{settings.protein_current}g / {settings.protein_target}g</p>
             </div>
             <div className="bg-slate-700/50 p-3 rounded-xl border border-slate-600/30">
+              <p className="text-[10px] text-emerald-400 uppercase font-black">Daily Calories</p>
+              <p className="text-xl font-bold text-emerald-400" data-testid="calorie-total">{settings.calorie_current} / {settings.calorie_target}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4 mt-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-[9px] uppercase font-black text-slate-500">Protein Progress</p>
+                <p className="text-[9px] text-slate-400 font-bold">{Math.round((settings.protein_current / settings.protein_target) * 100)}%</p>
+              </div>
+              <div className="w-full bg-slate-600 h-1.5 rounded-full overflow-hidden">
+                <div className="bg-blue-500 h-full rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (settings.protein_current / settings.protein_target) * 100)}%` }}></div>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-[9px] uppercase font-black text-slate-500">Calorie Progress</p>
+                <p className="text-[9px] text-slate-400 font-bold">{Math.round((settings.calorie_current / settings.calorie_target) * 100)}%</p>
+              </div>
+              <div className="w-full bg-slate-600 h-1.5 rounded-full overflow-hidden">
+                <div className="bg-emerald-500 h-full rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (settings.calorie_current / settings.calorie_target) * 100)}%` }}></div>
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 mt-4">
+            <div className="bg-slate-700/50 p-3 rounded-xl border border-slate-600/30">
               <p className="text-[10px] text-slate-400 uppercase font-black">Goal: 12%</p>
               <div className="w-full bg-slate-600 h-1.5 rounded-full mt-2 overflow-hidden">
                 <div className="bg-blue-500 h-full rounded-full transition-all duration-1000" style={{ width: `${bfProgress}%` }}></div>
               </div>
+            </div>
+            <div className="bg-slate-700/50 p-3 rounded-xl border border-slate-600/30">
+              <p className="text-[10px] text-slate-400 uppercase font-black text-center">Set Calorie Target</p>
+              <button onClick={() => setActiveModal('calorie-settings')} className="w-full mt-2 bg-emerald-600 hover:bg-emerald-700 py-2 rounded-lg text-[10px] font-black uppercase">
+                {settings.calorie_target} cal
+              </button>
             </div>
           </div>
           <div className="flex gap-2 mt-4">
