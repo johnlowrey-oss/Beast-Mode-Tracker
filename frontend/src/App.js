@@ -1738,6 +1738,16 @@ function MealPlannerModal({ mealPlan, setMealPlan, extendedLibrary, selectedWeek
                 );
               }).filter(Boolean)}
             </div>
+            
+            {/* Next Step: Shopping List */}
+            <div className="mt-6 pt-4 border-t border-slate-700">
+              <button
+                onClick={onGoToShopping}
+                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 py-3 rounded-xl font-bold uppercase tracking-wider text-white hover:scale-[1.02] transition flex items-center justify-center gap-2"
+              >
+                <ShoppingCart className="w-4 h-4" /> Next: View Shopping List →
+              </button>
+            </div>
           </div>
         )}
       </div>
