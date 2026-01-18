@@ -187,8 +187,16 @@ function App() {
     setAiLoading(true);
     try {
       const res = await axios.post(`${API}/meal-plan/generate`, { weeks: selectedWeeks });
-      setMealPlan(res.data.meal_plan);
-      setPlanWeeks(res.data.weeks);
+      const generatedPlan = res.data.meal_plan;
+      const weeks = res.data.weeks;
+      
+      // Save the generated plan to database
+      await axios.post(`${API}/meal-plan/save`, generatedPlan, {
+        params: { weeks: weeks }
+      });
+      
+      setMealPlan(generatedPlan);
+      setPlanWeeks(weeks);
       
       // Auto-generate shopping list
       const shopRes = await axios.get(`${API}/shopping-list/generate`);
@@ -204,6 +212,7 @@ function App() {
     } catch (error) {
       console.error("Error generating meal plan:", error);
       setAiLoading(false);
+      alert(`❌ Error: ${error.response?.data?.detail || error.message}`);
     }
   };
 
