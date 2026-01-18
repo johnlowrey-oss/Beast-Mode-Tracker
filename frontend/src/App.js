@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import "./App.css";
 import axios from "axios";
-import { Calendar, Activity, Dumbbell, Utensils, Pill, Zap, BarChart2, Plus, Minus, Check, Circle, X, Settings, RefreshCw, Timer, ShoppingCart, Info } from "lucide-react";
+import { Calendar, Activity, Dumbbell, Utensils, Pill, Zap, BarChart2, Plus, Minus, Check, Circle, X, Settings, RefreshCw, Timer, ShoppingCart, Info, ChefHat, ClipboardList, Package, AlertCircle, CheckCircle2, AlertTriangle, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -22,12 +22,23 @@ function App() {
   const [todayPlan, setTodayPlan] = useState(null);
   const [planner, setPlanner] = useState({});
   const [mealLibrary, setMealLibrary] = useState({ breakfast: [], lunch: [], dinner: [] });
+  const [extendedMealLibrary, setExtendedMealLibrary] = useState({ breakfast: [], lunch: [], dinner: [] });
+  
+  // NEW MEAL PLANNING STATE
+  const [mealPlan, setMealPlan] = useState([]);
+  const [planWeeks, setPlanWeeks] = useState(0);
+  const [shoppingList, setShoppingList] = useState([]);
+  const [prepTasks, setPrepTasks] = useState([]);
+  const [todaySuggestions, setTodaySuggestions] = useState(null);
+  const [inventory, setInventory] = useState([]);
   
   // UI State
-  const [activeModal, setActiveModal] = useState(null); // 'settings', 'metrics', 'planner', 'workouts', 'med', 'shopping', 'meal-select'
+  const [activeModal, setActiveModal] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState(null);
+  const [selectedWeeks, setSelectedWeeks] = useState(2);
+  const [selectedDate, setSelectedDate] = useState(null);
 
   // Load initial data
   useEffect(() => {
@@ -37,7 +48,10 @@ function App() {
   const loadAllData = async () => {
     try {
       setLoading(true);
-      const [habitsRes, metricsRes, settingsRes, suppsRes, scheduleRes, todayRes, plannerRes, mealsRes] = await Promise.all([
+      const [
+        habitsRes, metricsRes, settingsRes, suppsRes, scheduleRes, todayRes, 
+        plannerRes, mealsRes, extendedMealsRes, mealPlanRes, shoppingRes, prepRes, inventoryRes
+      ] = await Promise.all([
         axios.get(`${API}/habits`),
         axios.get(`${API}/metrics`),
         axios.get(`${API}/settings`),
@@ -45,7 +59,12 @@ function App() {
         axios.get(`${API}/schedule`),
         axios.get(`${API}/schedule/today`),
         axios.get(`${API}/planner`),
-        axios.get(`${API}/meals/library`)
+        axios.get(`${API}/meals/library`),
+        axios.get(`${API}/meals/library/extended`),
+        axios.get(`${API}/meal-plan`),
+        axios.get(`${API}/shopping-list`),
+        axios.get(`${API}/meal-plan/prep-tasks`),
+        axios.get(`${API}/inventory`)
       ]);
 
       setHabits(habitsRes.data.habits || {});
@@ -56,12 +75,35 @@ function App() {
       setTodayPlan(todayRes.data);
       setPlanner(plannerRes.data.planner || {});
       setMealLibrary(mealsRes.data);
+      setExtendedMealLibrary(extendedMealsRes.data);
+      setMealPlan(mealPlanRes.data.meal_plan || []);
+      setPlanWeeks(mealPlanRes.data.weeks || 0);
+      setShoppingList(shoppingRes.data.items || []);
+      setPrepTasks(prepRes.data.prep_tasks || []);
+      setInventory(inventoryRes.data.inventory || []);
+      
       setLoading(false);
     } catch (error) {
       console.error("Error loading data:", error);
       setLoading(false);
     }
   };
+
+  // Load today's suggestions
+  const loadTodaySuggestions = async () => {
+    try {
+      const res = await axios.get(`${API}/meal-plan/suggestions-today`);
+      setTodaySuggestions(res.data);
+    } catch (error) {
+      console.error("Error loading suggestions:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (!loading && mealPlan.length > 0) {
+      loadTodaySuggestions();
+    }
+  }, [loading, mealPlan]);
 
   // Toggle habit
   const toggleHabit = async (dateKey) => {
@@ -93,7 +135,6 @@ function App() {
     }
   };
 
-  // Water action
   const addWater = async () => {
     try {
       const res = await axios.post(`${API}/settings/water/add`);
@@ -103,7 +144,6 @@ function App() {
     }
   };
 
-  // Alcohol action
   const addAlcohol = async () => {
     try {
       const res = await axios.post(`${API}/settings/alcohol/add`);
@@ -113,13 +153,63 @@ function App() {
     }
   };
 
-  // Toggle supplement
   const toggleSupplement = async (index) => {
     try {
       const res = await axios.post(`${API}/supplements/toggle?index=${index}`);
       setSupplements(res.data.supplements);
     } catch (error) {
       console.error("Error toggling supplement:", error);
+    }
+  };
+
+  // MEAL PLANNING FUNCTIONS
+  const generateMealPlan = async () => {
+    setAiLoading(true);
+    try {
+      const res = await axios.post(`${API}/meal-plan/generate`, { weeks: selectedWeeks });
+      setMealPlan(res.data.meal_plan);
+      setPlanWeeks(res.data.weeks);
+      
+      // Auto-generate shopping list
+      const shopRes = await axios.get(`${API}/shopping-list/generate`);
+      setShoppingList(shopRes.data.shopping_list);
+      await axios.post(`${API}/shopping-list/save`, shopRes.data.shopping_list);
+      
+      // Get prep tasks
+      const prepRes = await axios.get(`${API}/meal-plan/prep-tasks`);
+      setPrepTasks(prepRes.data.prep_tasks);
+      
+      setAiLoading(false);
+      alert(`✅ Generated ${selectedWeeks}-week meal plan with shopping list!`);
+    } catch (error) {
+      console.error("Error generating meal plan:", error);
+      setAiLoading(false);
+    }
+  };
+
+  const toggleShoppingItem = async (index) => {
+    try {
+      const res = await axios.post(`${API}/shopping-list/toggle-purchased?item_index=${index}`);
+      setShoppingList(res.data.items);
+      // Reload inventory
+      const invRes = await axios.get(`${API}/inventory`);
+      setInventory(invRes.data.inventory);
+    } catch (error) {
+      console.error("Error toggling shopping item:", error);
+    }
+  };
+
+  const markPrepComplete = async (mealId, dates) => {
+    try {
+      await axios.post(`${API}/meal-plan/mark-prepped?meal_id=${mealId}`, dates);
+      // Reload meal plan and prep tasks
+      const planRes = await axios.get(`${API}/meal-plan`);
+      setMealPlan(planRes.data.meal_plan);
+      const prepRes = await axios.get(`${API}/meal-plan/prep-tasks`);
+      setPrepTasks(prepRes.data.prep_tasks);
+      loadTodaySuggestions();
+    } catch (error) {
+      console.error("Error marking prep complete:", error);
     }
   };
 
@@ -153,7 +243,6 @@ function App() {
     return { streak: streakCount, ruleBroken: broken, consecutiveMisses: missCount };
   }, [habits]);
 
-  // Generate last 7 days for habit grid
   const last7Days = useMemo(() => {
     const days = [];
     const today = new Date();
@@ -170,7 +259,6 @@ function App() {
     return days;
   }, []);
 
-  // Latest metrics
   const latestMetric = metrics[0] || { weight: 0, body_fat: 0 };
   const bfProgress = Math.max(0, Math.min(100, ((25 - latestMetric.body_fat) / (25 - 12)) * 100));
 
@@ -230,7 +318,6 @@ function App() {
     }
   };
 
-  // Log new metrics
   const logMetrics = async (weight, waist, neck) => {
     try {
       const bf = (86.010 * Math.log10(waist - neck) - 70.041 * Math.log10(75) + 36.76).toFixed(1);
@@ -283,6 +370,55 @@ function App() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 space-y-6">
+        {/* Today's Smart Suggestions - NEW! */}
+        {todaySuggestions && mealPlan.length > 0 && (
+          <section className="card bg-gradient-to-r from-blue-900/30 to-emerald-900/30 border border-blue-500/30 rounded-2xl p-6 shadow-xl" data-testid="smart-suggestions">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-bold flex items-center gap-2 uppercase tracking-widest text-blue-400">
+                <ChefHat className="w-4 h-4" /> Today's Meal Status
+              </h2>
+              <button onClick={() => setActiveModal('meal-planner')} className="text-xs text-emerald-400 font-bold hover:underline">
+                View Full Plan
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {['breakfast', 'lunch', 'dinner'].map((mealType) => {
+                const suggestion = todaySuggestions[mealType];
+                const statusConfig = {
+                  'ready_to_eat': { icon: CheckCircle2, color: 'emerald', label: 'READY' },
+                  'can_make_now': { icon: Check, color: 'blue', label: 'CAN MAKE' },
+                  'need_ingredients': { icon: AlertCircle, color: 'red', label: 'NEED ITEMS' },
+                  'not_prepped': { icon: Circle, color: 'slate', label: 'NOT PLANNED' }
+                };
+                const config = statusConfig[suggestion?.status] || statusConfig['not_prepped'];
+                const Icon = config.icon;
+
+                return (
+                  <div key={mealType} className={`bg-slate-800/50 p-3 rounded-xl border border-${config.color}-500/20`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[10px] font-black uppercase text-slate-400">{mealType}</p>
+                      <span className={`text-[8px] px-2 py-0.5 rounded-full bg-${config.color}-500/20 text-${config.color}-400 font-black`}>
+                        {config.label}
+                      </span>
+                    </div>
+                    {suggestion?.planned && (
+                      <div className="flex items-start gap-2">
+                        <Icon className={`w-4 h-4 mt-0.5 text-${config.color}-400`} />
+                        <div>
+                          <p className="text-xs font-bold">{suggestion.planned.meal_name}</p>
+                          {suggestion.status === 'ready_to_eat' && (
+                            <p className="text-[9px] text-emerald-400 mt-1">✓ Grab from fridge!</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
         {/* Momentum Section */}
         <section className={`bg-slate-800 rounded-2xl border p-6 shadow-xl ${ruleBroken ? 'border-red-500 animate-pulse' : 'border-slate-700'}`} data-testid="momentum-section">
           <div className="flex items-center justify-between mb-4">
@@ -407,33 +543,6 @@ function App() {
           </section>
         </div>
 
-        {/* Meals */}
-        <section className="bg-slate-800 rounded-2xl border border-slate-700 p-6" data-testid="meals-section">
-          <h2 className="text-lg font-bold flex items-center gap-2 mb-6"><Utensils className="text-orange-500" /> Nutrition Hub</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {['breakfast', 'lunch', 'dinner'].map((category) => {
-              const meal = settings.selected_meals[category] || {};
-              return (
-                <div key={category} className="bg-slate-700/30 p-4 rounded-2xl border border-slate-600/50" data-testid={`meal-${category}`}>
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="text-[10px] font-black uppercase text-blue-400">{category}</h4>
-                    <span className="text-[9px] font-bold text-slate-400">{meal.macros}</span>
-                  </div>
-                  <p className="text-xs font-bold mb-1 uppercase tracking-tighter h-8 line-clamp-2">{meal.name}</p>
-                  <div className="mt-4 flex gap-2">
-                    <button onClick={() => generateRecipe(category)} className="flex-1 text-[10px] bg-blue-600/10 text-blue-400 py-2 rounded-lg font-black uppercase border border-blue-500/20 hover:bg-blue-600/20 transition" data-testid={`draft-recipe-${category}`}>
-                      Draft ✨
-                    </button>
-                    <button onClick={() => { setSelectedCategory(category); setActiveModal('meal-select'); }} className="p-2 bg-slate-600 rounded-lg hover:bg-slate-500 transition" data-testid={`change-meal-${category}`}>
-                      <RefreshCw className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-12">
           <section className="bg-slate-800 rounded-2xl border border-slate-700 p-6 flex justify-between items-center" data-testid="alcohol-section">
@@ -478,30 +587,30 @@ function App() {
       <nav className="fixed bottom-6 left-4 right-4 h-20 bg-slate-800/95 backdrop-blur-sm rounded-3xl border border-slate-700 flex items-center justify-between px-2 shadow-2xl z-40" data-testid="bottom-nav">
         <button onClick={getMotivation} className="flex flex-col items-center justify-center gap-1 flex-1 min-w-0 text-yellow-500 hover:scale-105 transition" data-testid="motivation-button">
           <Zap className="w-5 h-5" />
-          <span className="text-[8px] font-bold uppercase tracking-tighter text-slate-300">Focus ✨</span>
+          <span className="text-[8px] font-bold uppercase tracking-tighter text-slate-300">Focus</span>
         </button>
-        <button onClick={() => setActiveModal('shopping')} className="flex flex-col items-center justify-center gap-1 flex-1 min-w-0 text-purple-400 hover:scale-105 transition" data-testid="shopping-button">
+        <button onClick={() => setActiveModal('shopping-list')} className="flex flex-col items-center justify-center gap-1 flex-1 min-w-0 text-purple-400 hover:scale-105 transition" data-testid="shopping-button">
           <ShoppingCart className="w-5 h-5" />
           <span className="text-[8px] font-bold uppercase tracking-tighter text-slate-300">Shop</span>
         </button>
-        <button onClick={() => { setSelectedCategory('breakfast'); setActiveModal('meal-select'); }} className="h-14 px-4 rounded-2xl font-black text-[10px] shadow-lg active:scale-95 transition tracking-widest uppercase flex-1 max-w-[100px] mx-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white" data-testid="build-button">
-          Build ✨
+        <button onClick={() => setActiveModal('meal-planner')} className="accent-gradient h-14 px-4 rounded-2xl font-black text-[10px] shadow-lg active:scale-95 transition tracking-widest uppercase flex-1 max-w-[100px] mx-1 text-white beast-glow">
+          Plan Meals
         </button>
-        <button onClick={() => setActiveModal('planner')} className="flex flex-col items-center justify-center gap-1 flex-1 min-w-0 text-emerald-400 hover:scale-105 transition" data-testid="planner-button">
-          <Calendar className="w-5 h-5" />
-          <span className="text-[8px] font-bold uppercase tracking-tighter text-slate-300">Plan</span>
+        <button onClick={() => setActiveModal('prep-checklist')} className="flex flex-col items-center justify-center gap-1 flex-1 min-w-0 text-emerald-400 hover:scale-105 transition" data-testid="prep-button">
+          <ClipboardList className="w-5 h-5" />
+          <span className="text-[8px] font-bold uppercase tracking-tighter text-slate-300">Prep</span>
         </button>
         <button onClick={() => setActiveModal('metrics')} className="flex flex-col items-center justify-center gap-1 flex-1 min-w-0 text-blue-400 hover:scale-105 transition" data-testid="metrics-nav-button">
           <BarChart2 className="w-5 h-5" />
           <span className="text-[8px] font-bold uppercase tracking-tighter text-slate-300">Metrics</span>
         </button>
-        <button onClick={() => setActiveModal('med')} className="flex flex-col items-center justify-center gap-1 flex-1 min-w-0 text-orange-400 hover:scale-105 transition" data-testid="med-button">
-          <Timer className="w-5 h-5" />
-          <span className="text-[8px] font-bold uppercase tracking-tighter text-slate-300">MED</span>
+        <button onClick={() => setActiveModal('inventory')} className="flex flex-col items-center justify-center gap-1 flex-1 min-w-0 text-orange-400 hover:scale-105 transition" data-testid="inventory-button">
+          <Package className="w-5 h-5" />
+          <span className="text-[8px] font-bold uppercase tracking-tighter text-slate-300">Stock</span>
         </button>
       </nav>
 
-      {/* Modals */}
+      {/* MODALS */}
       <Modal isOpen={activeModal === 'settings'} onClose={() => setActiveModal(null)} title="System Config">
         <div className="space-y-4">
           <div>
@@ -520,26 +629,38 @@ function App() {
         <WorkoutCues />
       </Modal>
 
-      <Modal isOpen={activeModal === 'med'} onClose={() => setActiveModal(null)} title="MED Routine">
-        <MEDRoutine />
+      <Modal isOpen={activeModal === 'meal-planner'} onClose={() => setActiveModal(null)} title="Meal Planner">
+        <MealPlannerModal 
+          mealPlan={mealPlan}
+          extendedLibrary={extendedMealLibrary}
+          selectedWeeks={selectedWeeks}
+          setSelectedWeeks={setSelectedWeeks}
+          onGenerate={generateMealPlan}
+          aiLoading={aiLoading}
+        />
       </Modal>
 
-      <Modal isOpen={activeModal === 'shopping'} onClose={() => setActiveModal(null)} title="Supply List">
-        <div className="p-20 text-center text-slate-400 uppercase font-black tracking-widest text-xs">
-          Features expanding soon...
-        </div>
+      <Modal isOpen={activeModal === 'shopping-list'} onClose={() => setActiveModal(null)} title="Shopping List">
+        <ShoppingListModal 
+          items={shoppingList}
+          onToggle={toggleShoppingItem}
+          onGenerate={async () => {
+            const res = await axios.get(`${API}/shopping-list/generate`);
+            setShoppingList(res.data.shopping_list);
+            await axios.post(`${API}/shopping-list/save`, res.data.shopping_list);
+          }}
+        />
       </Modal>
 
-      <Modal isOpen={activeModal === 'meal-select'} onClose={() => setActiveModal(null)} title={`Select ${selectedCategory}`}>
-        <MealSelector category={selectedCategory} library={mealLibrary} settings={settings} onSelect={async (meal) => {
-          try {
-            await axios.post(`${API}/meals/select`, meal);
-            await loadAllData();
-            setActiveModal(null);
-          } catch (error) {
-            console.error("Error selecting meal:", error);
-          }
-        }} />
+      <Modal isOpen={activeModal === 'prep-checklist'} onClose={() => setActiveModal(null)} title="Prep Day Checklist">
+        <PrepChecklistModal 
+          tasks={prepTasks}
+          onComplete={markPrepComplete}
+        />
+      </Modal>
+
+      <Modal isOpen={activeModal === 'inventory'} onClose={() => setActiveModal(null)} title="Ingredient Stock">
+        <InventoryModal inventory={inventory} />
       </Modal>
 
       <Modal isOpen={activeModal === 'ai-response'} onClose={() => setActiveModal(null)} title={aiResponse?.title || 'AI Response'}>
@@ -561,7 +682,7 @@ function Modal({ isOpen, onClose, title, children }) {
 
   return (
     <div className="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-4 overflow-y-auto" onClick={onClose}>
-      <div className="bg-slate-800 rounded-2xl w-full max-w-3xl p-6 my-10 border border-slate-700 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-slate-800 rounded-2xl w-full max-w-3xl p-6 my-10 border border-slate-700 shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-700">
           <h2 className="text-xl font-black text-blue-400 uppercase tracking-widest">{title}</h2>
           <button onClick={onClose} className="text-slate-400 p-2 hover:bg-slate-700 rounded-full transition">
@@ -576,255 +697,5 @@ function Modal({ isOpen, onClose, title, children }) {
   );
 }
 
-// Metrics Modal Component
-function MetricsModal({ metrics, settings, onLog }) {
-  const [weight, setWeight] = useState('');
-  const [waist, setWaist] = useState('');
-  const [neck, setNeck] = useState('');
-
-  const handleSubmit = () => {
-    if (weight && waist && neck) {
-      onLog(weight, waist, neck);
-      setWeight('');
-      setWaist('');
-      setNeck('');
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="bg-slate-700/50 p-6 rounded-2xl border border-slate-600">
-        <h4 className="text-xs font-black uppercase text-blue-400 mb-4 tracking-widest">New Log</h4>
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          <div>
-            <label className="text-[9px] uppercase text-slate-400 mb-1 block">Weight (lbs)</label>
-            <input type="number" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="lbs" className="bg-slate-800 border border-slate-600 p-3 rounded text-sm text-white w-full" data-testid="input-weight" />
-          </div>
-          <div>
-            <label className="text-[9px] uppercase text-slate-400 mb-1 block">Waist (in)</label>
-            <input type="number" value={waist} onChange={(e) => setWaist(e.target.value)} placeholder="in" className="bg-slate-800 border border-slate-600 p-3 rounded text-sm text-white w-full" data-testid="input-waist" />
-          </div>
-          <div>
-            <label className="text-[9px] uppercase text-slate-400 mb-1 block">Neck (in)</label>
-            <input type="number" value={neck} onChange={(e) => setNeck(e.target.value)} placeholder="in" className="bg-slate-800 border border-slate-600 p-3 rounded text-sm text-white w-full" data-testid="input-neck" />
-          </div>
-        </div>
-        <button onClick={handleSubmit} className="w-full bg-blue-600 py-3 rounded-xl font-bold uppercase text-xs tracking-widest text-white shadow-lg hover:bg-blue-700 transition" data-testid="save-metrics-button">
-          Save Stats
-        </button>
-      </div>
-      <div className="space-y-2 max-h-96 overflow-y-auto">
-        {metrics.map((m, idx) => (
-          <div key={idx} className="flex justify-between bg-slate-700/50 p-3 rounded-xl border border-slate-600/50">
-            <div>
-              <p className="text-[10px] uppercase font-bold text-slate-400">{m.date}</p>
-              <p className="text-sm font-bold">{m.weight} lbs</p>
-            </div>
-            <div className="text-right">
-              <p className="text-[10px] uppercase font-bold text-slate-400">BF%</p>
-              <p className="text-sm text-blue-400 font-black">{m.body_fat}%</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// Workout Cues Component
-function WorkoutCues() {
-  const cues = [
-    { exercise: "FLOOR PRESS", cue: "Stop elbows at floor to protect shoulder joints while hitting overload. Allows heavy loading safely." },
-    { exercise: "HACK SQUAT", cue: "Feet low on platform. Upright torso. Control 3-sec eccentric. Grows quads without back fatigue." },
-    { exercise: "TRAP BAR DEADLIFT", cue: "Neutral grip and centered load make this safer for tall lifters than conventional deadlifts." },
-    { exercise: "HANGING LEG RAISES", cue: "The 8-pack builder. Don't swing. Curl pelvis towards ribs. Tall torso = massive tension." }
-  ];
-
-  return (
-    <div className="space-y-4">
-      {cues.map((cue, idx) => (
-        <div key={idx} className="p-4 bg-slate-700/50 rounded-xl border border-slate-600">
-          <h4 className="font-black text-blue-400 uppercase text-xs mb-1">{cue.exercise}</h4>
-          <p className="text-xs text-slate-300">{cue.cue}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// MED Routine Component
-function MEDRoutine() {
-  const exercises = [
-    { name: "Goblet Squat", sets: "3x15" },
-    { name: "Pushups", sets: "3xMAX" },
-    { name: "DB Row", sets: "3x15" }
-  ];
-
-  return (
-    <ul className="space-y-3">
-      {exercises.map((ex, idx) => (
-        <li key={idx} className="flex justify-between p-3 bg-slate-700 rounded-xl border border-slate-600">
-          <span>{ex.name}</span>
-          <span className="font-black text-blue-400">{ex.sets}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-// Formatted AI Response Component
-function FormattedAIResponse({ content }) {
-  if (!content) return null;
-
-  // Split content by lines and format
-  const formatContent = (text) => {
-    const lines = text.split('\n');
-    const elements = [];
-    let currentSection = [];
-    let listItems = [];
-    let inList = false;
-
-    lines.forEach((line, idx) => {
-      const trimmed = line.trim();
-      
-      // Skip empty lines but add spacing
-      if (!trimmed) {
-        if (currentSection.length > 0) {
-          elements.push(<p key={`p-${idx}`} className="mb-4 text-slate-300 leading-relaxed">{currentSection.join(' ')}</p>);
-          currentSection = [];
-        }
-        if (inList && listItems.length > 0) {
-          elements.push(
-            <ul key={`ul-${idx}`} className="mb-4 space-y-2 list-disc list-inside text-slate-300">
-              {listItems.map((item, i) => <li key={i} className="ml-2">{item}</li>)}
-            </ul>
-          );
-          listItems = [];
-          inList = false;
-        }
-        return;
-      }
-
-      // Main headers (### or **TITLE**)
-      if (trimmed.startsWith('###') || (trimmed.startsWith('**') && trimmed.endsWith('**') && trimmed.length < 60)) {
-        if (currentSection.length > 0) {
-          elements.push(<p key={`p-${idx}`} className="mb-4 text-slate-300 leading-relaxed">{currentSection.join(' ')}</p>);
-          currentSection = [];
-        }
-        const headerText = trimmed.replace(/^###\s*/, '').replace(/^\*\*/, '').replace(/\*\*$/, '');
-        elements.push(
-          <h3 key={`h3-${idx}`} className="text-lg font-black text-blue-400 uppercase tracking-wide mt-6 mb-3 border-b border-blue-500/30 pb-2">
-            {headerText}
-          </h3>
-        );
-        return;
-      }
-
-      // Subheaders (numbered like "1. **Ingredients**")
-      if (/^\d+\.\s*\*\*/.test(trimmed)) {
-        if (currentSection.length > 0) {
-          elements.push(<p key={`p-${idx}`} className="mb-4 text-slate-300 leading-relaxed">{currentSection.join(' ')}</p>);
-          currentSection = [];
-        }
-        const subHeaderText = trimmed.replace(/^\d+\.\s*\*\*/, '').replace(/\*\*.*$/, '');
-        elements.push(
-          <h4 key={`h4-${idx}`} className="text-base font-bold text-emerald-400 uppercase tracking-wider mt-5 mb-2 flex items-center gap-2">
-            <span className="w-1 h-4 bg-emerald-400 rounded"></span>
-            {subHeaderText}
-          </h4>
-        );
-        return;
-      }
-
-      // List items (starts with - or • or number.)
-      if (/^[-•]\s/.test(trimmed) || /^\d+\.\s/.test(trimmed)) {
-        if (currentSection.length > 0) {
-          elements.push(<p key={`p-${idx}`} className="mb-4 text-slate-300 leading-relaxed">{currentSection.join(' ')}</p>);
-          currentSection = [];
-        }
-        inList = true;
-        const itemText = trimmed.replace(/^[-•]\s/, '').replace(/^\d+\.\s/, '');
-        listItems.push(itemText);
-        return;
-      }
-
-      // Bold text inline
-      if (trimmed.includes('**')) {
-        if (currentSection.length > 0) {
-          elements.push(<p key={`p-${idx}`} className="mb-4 text-slate-300 leading-relaxed">{currentSection.join(' ')}</p>);
-          currentSection = [];
-        }
-        const parts = trimmed.split(/(\*\*[^*]+\*\*)/g);
-        elements.push(
-          <p key={`p-${idx}`} className="mb-3 text-slate-300 leading-relaxed">
-            {parts.map((part, i) => {
-              if (part.startsWith('**') && part.endsWith('**')) {
-                return <strong key={i} className="text-white font-bold">{part.slice(2, -2)}</strong>;
-              }
-              return part;
-            })}
-          </p>
-        );
-        return;
-      }
-
-      // Regular text
-      if (inList && listItems.length > 0) {
-        elements.push(
-          <ul key={`ul-${idx}`} className="mb-4 space-y-2 list-disc list-inside text-slate-300">
-            {listItems.map((item, i) => <li key={i} className="ml-2">{item}</li>)}
-          </ul>
-        );
-        listItems = [];
-        inList = false;
-      }
-      currentSection.push(trimmed);
-    });
-
-    // Add remaining content
-    if (currentSection.length > 0) {
-      elements.push(<p key="final-p" className="mb-4 text-slate-300 leading-relaxed">{currentSection.join(' ')}</p>);
-    }
-    if (listItems.length > 0) {
-      elements.push(
-        <ul key="final-ul" className="mb-4 space-y-2 list-disc list-inside text-slate-300">
-          {listItems.map((item, i) => <li key={i} className="ml-2">{item}</li>)}
-        </ul>
-      );
-    }
-
-    return elements;
-  };
-
-  return (
-    <div className="text-left space-y-2 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
-      {formatContent(content)}
-    </div>
-  );
-}
-
-// Meal Selector Component
-function MealSelector({ category, library, settings, onSelect }) {
-  const meals = library[category] || [];
-
-  return (
-    <div className="space-y-3">
-      {meals.map((meal) => (
-        <button
-          key={meal.id}
-          onClick={() => onSelect(meal)}
-          className="w-full p-4 bg-slate-700/50 rounded-xl border border-slate-600 hover:border-blue-500 transition text-left"
-          data-testid={`meal-option-${meal.id}`}
-        >
-          <div className="flex justify-between items-start mb-2">
-            <p className="font-bold text-sm uppercase tracking-tighter">{meal.name}</p>
-            <span className="text-[9px] font-bold text-slate-400">{meal.macros}</span>
-          </div>
-          <p className="text-[10px] text-slate-400">{meal.blueprint}</p>
-        </button>
-      ))}
-    </div>
-  );
-}
-
+// Continue in next message with modal components...
 export default App;
