@@ -53,7 +53,7 @@ function App() {
       setLoading(true);
       const [
         habitsRes, metricsRes, settingsRes, suppsRes, scheduleRes, todayRes, 
-        plannerRes, mealsRes, extendedMealsRes, mealPlanRes, shoppingRes, prepRes, inventoryRes
+        plannerRes, mealsRes, extendedMealsRes, mealPlanRes, shoppingRes, prepRes, inventoryRes, prepAlertsRes
       ] = await Promise.all([
         axios.get(`${API}/habits`),
         axios.get(`${API}/metrics`),
@@ -67,7 +67,8 @@ function App() {
         axios.get(`${API}/meal-plan`),
         axios.get(`${API}/shopping-list`),
         axios.get(`${API}/meal-plan/prep-tasks`),
-        axios.get(`${API}/inventory`)
+        axios.get(`${API}/inventory`),
+        axios.get(`${API}/meal-plan/prep-alerts`)
       ]);
 
       setHabits(habitsRes.data.habits || {});
@@ -84,6 +85,7 @@ function App() {
       setShoppingList(shoppingRes.data.items || []);
       setPrepTasks(prepRes.data.prep_tasks || []);
       setInventory(inventoryRes.data.inventory || []);
+      setPrepAlerts(prepAlertsRes.data || { alerts: [], has_urgent: false });
       
       setLoading(false);
     } catch (error) {
