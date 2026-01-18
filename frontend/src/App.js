@@ -13,6 +13,8 @@ function App() {
   const [settings, setSettings] = useState({
     protein_target: 200,
     protein_current: 0,
+    calorie_target: 2400,
+    calorie_current: 0,
     water_liters: 0.0,
     alcohol_count: 0,
     selected_meals: {}
