@@ -290,11 +290,23 @@ async def get_settings():
         }
     
     settings = {k: v for k, v in settings_doc.items() if k != "_id"}
-    # Ensure calorie fields exist
-    if "calorie_target" not in settings:
-        settings["calorie_target"] = 2400
-    if "calorie_current" not in settings:
-        settings["calorie_current"] = 0
+    # Ensure all required fields exist with defaults
+    defaults = {
+        "protein_target": 200,
+        "protein_current": 0,
+        "calorie_target": 2400,
+        "calorie_current": 0,
+        "water_liters": 0.0,
+        "alcohol_count": 0,
+        "selected_meals": {
+            "breakfast": MEAL_LIBRARY["breakfast"][0],
+            "lunch": MEAL_LIBRARY["lunch"][0],
+            "dinner": MEAL_LIBRARY["dinner"][0]
+        }
+    }
+    for key, default_value in defaults.items():
+        if key not in settings:
+            settings[key] = default_value
     return settings
 
 @api_router.post("/settings")
