@@ -1568,7 +1568,7 @@ function WorkoutCues() {
 }
 
 // Meal Planner Modal
-function MealPlannerModal({ mealPlan, setMealPlan, extendedLibrary, selectedWeeks, setSelectedWeeks, onGenerate, aiLoading }) {
+function MealPlannerModal({ mealPlan, setMealPlan, extendedLibrary, selectedWeeks, setSelectedWeeks, onGenerate, aiLoading, onGoToShopping }) {
   const [swapModalOpen, setSwapModalOpen] = useState(false);
   const [swapTarget, setSwapTarget] = useState(null);
 
