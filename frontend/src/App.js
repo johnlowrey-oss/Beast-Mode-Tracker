@@ -584,6 +584,47 @@ function App() {
                           {suggestion.status === 'ready_to_eat' && (
                             <p className="text-[9px] text-emerald-400 mt-1">✓ Grab from fridge!</p>
                           )}
+                          {suggestion.status !== 'ready_to_eat' && (
+                            <div className="flex gap-1 mt-2">
+                              <button
+                                onClick={() => {
+                                  // Set the meal as selected for recipe generation
+                                  const mealData = extendedMealLibrary[mealType]?.find(m => m.id === suggestion.planned.meal_id);
+                                  if (mealData) {
+                                    setSettings(prev => ({
+                                      ...prev,
+                                      selected_meals: {
+                                        ...prev.selected_meals,
+                                        [mealType]: mealData
+                                      }
+                                    }));
+                                    generateRecipe(mealType, 'individual', suggestion.planned.meal_id);
+                                  }
+                                }}
+                                className="text-[8px] px-2 py-1 bg-blue-500/20 text-blue-400 rounded font-bold hover:bg-blue-500/30 transition"
+                              >
+                                Recipe (1)
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const mealData = extendedMealLibrary[mealType]?.find(m => m.id === suggestion.planned.meal_id);
+                                  if (mealData) {
+                                    setSettings(prev => ({
+                                      ...prev,
+                                      selected_meals: {
+                                        ...prev.selected_meals,
+                                        [mealType]: mealData
+                                      }
+                                    }));
+                                    generateRecipe(mealType, 'family', suggestion.planned.meal_id);
+                                  }
+                                }}
+                                className="text-[8px] px-2 py-1 bg-purple-500/20 text-purple-400 rounded font-bold hover:bg-purple-500/30 transition"
+                              >
+                                Family
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
