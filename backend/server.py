@@ -1027,6 +1027,26 @@ async def get_today_suggestions():
     
     return suggestions
 
+@api_router.get("/meal-plan/daily-totals")
+async def get_daily_totals(date: str):
+    """Get calorie and protein totals for a specific date"""
+    plan_doc = await db.meal_plan.find_one({"_id": "user_meal_plan"})
+    if not plan_doc:
+        return {"calories": 0, "protein": 0, "meals": []}
+    
+    meals = plan_doc.get("meals", [])
+    daily_meals = [m for m in meals if m["date"] == date]
+    
+    total_calories = sum(m.get("calories", 0) for m in daily_meals)
+    total_protein = sum(m.get("protein", 0) for m in daily_meals)
+    
+    return {
+        "date": date,
+        "calories": total_calories,
+        "protein": total_protein,
+        "meals": daily_meals
+    }
+
 # Include the router in the main app
 app.include_router(api_router)
 
