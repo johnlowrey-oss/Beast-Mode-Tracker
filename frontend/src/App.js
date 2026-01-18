@@ -1155,6 +1155,16 @@ function App() {
         <InventoryModal inventory={inventory} setInventory={setInventory} />
       </Modal>
 
+      <Modal isOpen={activeModal === 'workout'} onClose={() => setActiveModal(null)} title="Log Workout">
+        <WorkoutModal 
+          todayWorkout={todayWorkout} 
+          setTodayWorkout={setTodayWorkout}
+          todayPlan={todayPlan}
+          onClose={() => setActiveModal(null)}
+          reloadData={loadAllData}
+        />
+      </Modal>
+
       <Modal isOpen={activeModal === 'ai-response'} onClose={() => setActiveModal(null)} title={aiResponse?.title || 'AI Response'}>
         <div className="max-w-none">
           {aiLoading ? (
