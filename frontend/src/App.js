@@ -543,10 +543,12 @@ function App() {
       </Modal>
 
       <Modal isOpen={activeModal === 'ai-response'} onClose={() => setActiveModal(null)} title={aiResponse?.title || 'AI Response'}>
-        <div className="prose prose-invert max-w-none">
-          <div className="whitespace-pre-wrap text-sm leading-relaxed">
-            {aiLoading ? <div className="animate-pulse text-blue-400">Generating...</div> : aiResponse?.content}
-          </div>
+        <div className="max-w-none">
+          {aiLoading ? (
+            <div className="animate-pulse text-blue-400 text-center py-10 text-lg font-bold">Generating...</div>
+          ) : (
+            <FormattedAIResponse content={aiResponse?.content} />
+          )}
         </div>
       </Modal>
     </div>
