@@ -417,21 +417,32 @@ function App() {
   const bfProgress = Math.max(0, Math.min(100, ((25 - latestMetric.body_fat) / (25 - 12)) * 100));
 
   // AI Functions
-  const generateRecipe = async (category) => {
+  const generateRecipe = async (category, servings = 'individual', mealId = null) => {
     const meal = settings.selected_meals[category];
     if (!meal) return;
 
     setAiLoading(true);
     setActiveModal('ai-response');
-    setAiResponse({ title: `Generating ${meal.name}...`, content: "AI is cooking up something amazing..." });
+    setAiResponse({ 
+      title: `Generating ${meal.name}...`, 
+      content: "AI is cooking up something amazing...",
+      servings: servings
+    });
 
     try {
       const res = await axios.post(`${API}/ai/recipe`, {
         meal_name: meal.name,
         meal_blueprint: meal.blueprint,
-        category: category
+        category: category,
+        servings: servings,
+        meal_id: mealId || meal.id
       });
-      setAiResponse({ title: meal.name, content: res.data.recipe });
+      setAiResponse({ 
+        title: meal.name, 
+        content: res.data.recipe,
+        servings: res.data.servings,
+        serving_count: res.data.serving_count
+      });
     } catch (error) {
       setAiResponse({ title: "Error", content: "Failed to generate recipe. Please try again." });
     } finally {
