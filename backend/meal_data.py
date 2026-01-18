@@ -203,6 +203,10 @@ EXTENDED_MEAL_LIBRARY = {
             "id": "d2",
             "name": "Slow Cooker Salsa Chicken",
             "macros": "650 Cal | 58g P",
+            "calories": 650,
+            "protein": 58,
+            "carbs": 55,
+            "fat": 20,
             "blueprint": "3lbs Chicken Thighs, 1 jar Salsa, Taco Seasoning, Black Beans. Cook on low 6-8 hours, shred with forks",
             "category": "dinner",
             "prep_time_minutes": 480,  # 8 hours slow cook
